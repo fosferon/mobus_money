@@ -1,0 +1,20 @@
+# .audit-config.yml — OpenSpec Audit configuration for mobus_money
+#
+# Consumed by: ~/.config/gc/tools/openspec-audit/bin/openspec-audit
+#
+# Scaffold only: the per-change keys (scoped_modules, forward_section_headers,
+# exclude_markers, ...) are authored with each change-set, after exact-text
+# verification. Nothing here suppresses a claim; a key that does is added only
+# for a provably non-claim span, never to manufacture a pass.
+
+# AST index for module/function resolution. This project's server is NOT yet
+# registered with gc_daemon, so the audit degrades to path-convention grep
+# (lower fidelity) until it is.
+mcp_server: elixir-context-mobus_money
+
+ground_truth_sources:
+  change_set:
+    - openspec/changes/{change_name}/proposal.md
+    - openspec/changes/{change_name}/design.md
+    - openspec/changes/{change_name}/tasks.md
+    - "openspec/changes/{change_name}/specs/**/*.md"
