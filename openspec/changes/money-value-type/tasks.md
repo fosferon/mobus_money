@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add `{:ex_money, "~> 6.2"}` and `{:ecto, "~> 3.10", optional: true}`
       to `mix.exs` `deps/0`; `mix deps.get`.
-- [ ] 1.2 `@moduledoc` on `MobusMoney` states the required consumer config
+- [x] 1.2 `@moduledoc` on `MobusMoney` states the required consumer config
       line verbatim (`config :ex_money, auto_start_exchange_rate_service:
       false`) and that `ensure_fx_disabled!/0` (task 5.1) must be called from
       the consumer's own `Application.start/2` (D4 — corrected during doc
