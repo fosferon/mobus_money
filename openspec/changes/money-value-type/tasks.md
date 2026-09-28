@@ -117,7 +117,7 @@
 - [x] 4.2 `money_fields/1(name)` macro: declares `<name>_amount`
       (`numeric(28,8)`) and `<name>_currency` (`varchar(3)`), `name` the
       atom prefix the caller chooses.
-- [ ] 4.3 `validate_money(changeset, name)` (PE-5, MINOR — `name` pinned as
+- [x] 4.3 `validate_money(changeset, name)` (PE-5, MINOR — `name` pinned as
       the second argument, matching `money_fields/1`'s own): pairing (both
       null or both non-null), registry membership via
       `MobusMoney.Currency.valid?/1`, non-negativity.

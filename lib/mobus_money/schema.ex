@@ -55,5 +55,78 @@ defmodule MobusMoney.Schema do
         field(:"#{unquote(name)}_currency", :string)
       end
     end
+
+    @doc """
+    Validates the `name` pair on a changeset: both columns set or both nil
+    (pairing), the currency a known ISO 4217 code (per
+    `MobusMoney.Currency.valid?/1`), and the amount non-negative.
+
+    Non-negativity is scoped to this persisted pair deliberately (design
+    D5): every surveyed holding is a magnitude (a budget cap, a usage cost,
+    a spend total), never a signed balance — a signed-arithmetic bug
+    reaching a persisted magnitude column undetected is exactly what this
+    rejects. `name` is the same atom prefix `money_fields/1` declared.
+    """
+    def validate_money(%Ecto.Changeset{} = changeset, name) when is_atom(name) do
+      amount_field = field_name(name, :amount)
+      currency_field = field_name(name, :currency)
+      amount = Ecto.Changeset.get_field(changeset, amount_field)
+      currency = Ecto.Changeset.get_field(changeset, currency_field)
+
+      changeset
+      |> validate_pairing(amount_field, currency_field, amount, currency)
+      |> validate_registry(currency_field, currency)
+      |> validate_non_negative(amount_field, amount)
+    end
+
+    defp validate_pairing(changeset, amount_field, currency_field, amount, currency) do
+      case {amount, currency} do
+        {nil, nil} ->
+          changeset
+
+        {nil, _currency} ->
+          changeset
+          |> Ecto.Changeset.add_error(amount_field, "must be set together with #{currency_field}")
+          |> Ecto.Changeset.add_error(currency_field, "must be set together with #{amount_field}")
+
+        {_amount, nil} ->
+          changeset
+          |> Ecto.Changeset.add_error(amount_field, "must be set together with #{currency_field}")
+          |> Ecto.Changeset.add_error(currency_field, "must be set together with #{amount_field}")
+
+        {_amount, _currency} ->
+          changeset
+      end
+    end
+
+    defp validate_registry(changeset, _currency_field, nil), do: changeset
+
+    defp validate_registry(changeset, currency_field, currency) do
+      if MobusMoney.Currency.valid?(currency) do
+        changeset
+      else
+        Ecto.Changeset.add_error(
+          changeset,
+          currency_field,
+          "is not a valid ISO 4217 currency code"
+        )
+      end
+    end
+
+    defp validate_non_negative(changeset, _amount_field, nil), do: changeset
+
+    defp validate_non_negative(changeset, amount_field, amount) do
+      if negative?(amount) do
+        Ecto.Changeset.add_error(changeset, amount_field, "must be non-negative")
+      else
+        changeset
+      end
+    end
+
+    defp negative?(%Decimal{} = amount), do: Decimal.negative?(amount)
+    defp negative?(amount) when is_integer(amount), do: amount < 0
+
+    defp field_name(name, :amount), do: :"#{name}_amount"
+    defp field_name(name, :currency), do: :"#{name}_currency"
   end
 end

@@ -25,4 +25,90 @@ defmodule MobusMoney.SchemaTest do
       assert Budget.__schema__(:type, :note) == :string
     end
   end
+
+  describe "validate_money/2" do
+    test "accepts a valid, paired, non-negative amount" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(
+          %{"budget_amount" => Decimal.new("19.99"), "budget_currency" => "EUR"},
+          [:budget_amount, :budget_currency]
+        )
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      assert changeset.valid?
+      assert changeset.errors == []
+    end
+
+    test "accepts a null/null pair" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(%{}, [:budget_amount, :budget_currency])
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      assert changeset.valid?
+    end
+
+    test "rejects a half-set pair: amount set, currency nil" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(
+          %{"budget_amount" => Decimal.new("19.99")},
+          [:budget_amount, :budget_currency]
+        )
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      refute changeset.valid?
+      assert Keyword.has_key?(changeset.errors, :budget_amount)
+      assert Keyword.has_key?(changeset.errors, :budget_currency)
+    end
+
+    test "rejects a half-set pair: currency set, amount nil" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(%{"budget_currency" => "EUR"}, [:budget_amount, :budget_currency])
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      refute changeset.valid?
+      assert Keyword.has_key?(changeset.errors, :budget_amount)
+      assert Keyword.has_key?(changeset.errors, :budget_currency)
+    end
+
+    test "rejects an unknown currency" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(
+          %{"budget_amount" => Decimal.new("19.99"), "budget_currency" => "NOPE"},
+          [:budget_amount, :budget_currency]
+        )
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      refute changeset.valid?
+      assert Keyword.has_key?(changeset.errors, :budget_currency)
+    end
+
+    test "rejects a negative amount" do
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(
+          %{"budget_amount" => Decimal.new("-0.01"), "budget_currency" => "EUR"},
+          [:budget_amount, :budget_currency]
+        )
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      refute changeset.valid?
+      assert Keyword.has_key?(changeset.errors, :budget_amount)
+
+      # zero is a magnitude, not negative
+      zero_changeset =
+        %Budget{}
+        |> Ecto.Changeset.cast(
+          %{"budget_amount" => Decimal.new("0.00"), "budget_currency" => "EUR"},
+          [:budget_amount, :budget_currency]
+        )
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      assert zero_changeset.valid?
+    end
+  end
 end
