@@ -10,6 +10,14 @@
 # (lower fidelity) until it is.
 mcp_server: elixir-context-mobus_money
 
+# openspec-land's merge test runs in a fresh `git worktree` off master's tip
+# (a linked worktree, its own deps/_build, nothing shared with this worktree
+# or the main checkout). This is the first change-set to add real runtime
+# deps (ex_money/ecto/ex_doc), so the trial worktree needs them fetched
+# before `merge_test_cmd` compiles. (stage8_merge trial: TEST_FAILED, "the
+# dependency is not available, run mix deps.get", 2026-09-28.)
+merge_setup_cmd: mix deps.get
+
 ground_truth_sources:
   change_set:
     - openspec/changes/{change_name}/proposal.md
