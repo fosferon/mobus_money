@@ -48,44 +48,70 @@
       `{:error, :unparseable_amount}`. `new!/2` (PL-1 — the spec requires
       this to RAISE, not return a tuple): raises `MobusMoney.InvalidMoneyError`
       with the reason from `new/2`.
-- [ ] 3.2 `zero/1` → `Money.zero/1`; `add/2`/`sub/2` → `Money.add/2`/
-      `Money.sub/2` (real mismatch-error-tuple contract, delegated directly);
-      `sum/2` → **self-reducing fold over this module's OWN `add/2`, never
-      `Money.sum/2`** (PE-5, BLOCKER: `Money.sum/2`'s 2nd arg is FX rates and
-      it converts — delegating it would silently violate the
-      never-converts requirement); `mult/2` → `Money.mult/2`, refusing a
-      float multiplier the same way `new/2` refuses a float amount;
-      `compare/2`/`compare!/2` → `Money.compare/2`/`Money.compare!/2`;
-      `negative?/1`/`zero?/1` → `Money.negative?/1`/`Money.zero?/1`.
+- [ ] 3.2 `zero/1` → `Money.zero/1`. `add/2`/`sub/2`/`compare/2` (round-3
+      pre-execution PE-1, BLOCKER — `Money.add/2` etc. do NOT return a
+      structured mismatch tuple; they return `{:error, {ArgumentError,
+      "Cannot add monies with different currencies..."}}`): pattern-match
+      both operands' `.currency` FIRST — same currency delegates to the real
+      `Money.*` function (now guaranteed mismatch-free); different
+      currencies return `{:error, {:currency_mismatch, currency_a,
+      currency_b}}` directly, never calling the upstream function.
+      `compare!/2` is NOT shipped (PE-6 — no consumer need, unargued bang
+      asymmetry). `sum/2(money_list, currency)` (PE-2, MAJOR — the round-2
+      pseudocode crashed on `[]` and on a 3+-item mismatch not in the last
+      pair, and dropped the "one stated currency" second argument entirely):
+      `Enum.reduce_while(money_list, {:ok, zero(currency)}, fn m, {:ok,
+      acc} -> case add(acc, m) do {:ok,_}=ok -> {:cont,ok}; {:error,_}=e ->
+      {:halt,e} end end)` — seeded from `zero(currency)` (empty list returns
+      it, no crash), halts immediately on the first mismatch (never re-feeds
+      an error tuple into `add/2`), never calls `Money.sum/2` (its 2nd arg
+      is FX rates and it converts — would silently violate never-converts).
+      `mult/2` → `Money.mult/2`, refusing a float multiplier the same way
+      `new/2` refuses a float amount. `negative?/1`/`zero?/1` →
+      `Money.negative?/1`/`Money.zero?/1`.
 - [ ] 3.3 `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
       (real signature is a KEYWORD LIST, not a bare positional mode — PE-1
       area finding), mode defaults to
       `MobusMoney.Currency.default_rounding_mode/0`; `format/1` →
-      `Money.to_string/1`; `to_integer_exp/1` → `Money.to_integer_exp/2`
-      (fixed options), `from_integer/2` → `Money.from_integer/2` — this
-      library's own names for ex_money's real minor-unit pair, NOT
-      `to_minor_units/1`/`from_minor_units/2` (PE-2, BLOCKER: that API does
-      not exist in `ex_money`).
+      `Money.to_string/1` (returns `{:ok, string}`, ex_money's real shape);
+      `to_integer_exp/1` → `Money.to_integer_exp(money, rounding_mode:
+      MobusMoney.Currency.default_rounding_mode())` (PE-3, MINOR — must pass
+      the house rounding mode explicitly; ex_money's own internal default is
+      `:half_even`), returns `{currency_code, integer, exponent,
+      remainder_money}` with exponent as the NEGATIVE of the digit count
+      (ex_money's own convention, passed through unmodified); `from_integer/2`
+      → `Money.from_integer/2` — this library's own names for ex_money's
+      real minor-unit pair, NOT `to_minor_units/1`/`from_minor_units/2`
+      (PE-2-prior, BLOCKER: that API does not exist in `ex_money`).
 - [ ] 3.4 Falsifying tests per Testing section: float/nil refusal, exact
-      0.056+0.044 arithmetic, mixed-currency error carrying both codes,
-      JPY-vs-EUR rounding at both modes, minor-unit round-trip.
+      0.056+0.044 arithmetic, mixed-currency error carrying both codes (via
+      the currency-check-first path, not an upstream string), `sum/2` on an
+      empty list, a 2-item mismatch, and a 3+-item list with the mismatch in
+      the MIDDLE (the specific crash PE-2 identified), JPY-vs-EUR rounding
+      at both modes, `to_integer_exp/1`/`from_integer/2` round-trip with the
+      house rounding mode applied.
 
 ## 4. Storage-pair schema helper (D5) — optional-Ecto guarded
 
 - [ ] 4.1 `MobusMoney.Schema`: `Code.ensure_loaded?/1` guard so the module
       does not require Ecto to compile when absent.
-- [ ] 4.2 `money_fields/1` macro: declares `<name>_amount` (`numeric(28,8)`)
-      and `<name>_currency` (`varchar(3)`).
-- [ ] 4.3 `validate_money/2`: pairing (both null or both non-null), registry
-      membership via `MobusMoney.Currency.valid?/1`, non-negativity.
-- [ ] 4.4 `read_money/2`: `{:ok, nil}` for null/null, `{:ok, money}` for a
-      valid pair, `{:error, :half_set_pair}` for exactly one column set
-      (PE-3 — reachable outside `validate_money/2`, e.g. raw SQL; must not
-      crash).
+- [ ] 4.2 `money_fields/1(name)` macro: declares `<name>_amount`
+      (`numeric(28,8)`) and `<name>_currency` (`varchar(3)`), `name` the
+      atom prefix the caller chooses.
+- [ ] 4.3 `validate_money(changeset, name)` (PE-5, MINOR — `name` pinned as
+      the second argument, matching `money_fields/1`'s own): pairing (both
+      null or both non-null), registry membership via
+      `MobusMoney.Currency.valid?/1`, non-negativity.
+- [ ] 4.4 `read_money(struct, name)`: `{:ok, nil}` for null/null, `{:ok,
+      money}` for a valid pair, `{:error, :half_set_pair}` for exactly one
+      column set (PE-3-prior — reachable outside `validate_money/2`, e.g.
+      raw SQL; must not crash).
 - [ ] 4.5 Falsifying tests: half-set pair rejected, unknown currency
-      rejected, negative amount rejected, null/null reads as `nil`; a guard
-      test that the module does not raise at compile time when Ecto is
-      stubbed absent.
+      rejected, negative amount rejected, null/null reads as `{:ok, nil}`.
+      **Ecto-absent coverage is task 6.1's two compile runs, not a unit test
+      here** (PE-4, MINOR — `Code.ensure_loaded?/1` is compile-time-resolved
+      stdlib and cannot be stubbed in ExUnit; the round-2 text named an
+      unimplementable test).
 
 ## 5. FX-disabled guard (D4 — corrected mechanism, doc review F1.1)
 

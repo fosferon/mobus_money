@@ -135,22 +135,61 @@ three named consumers' documented needs:
   wording said "normalizes every raise path to `{:error, reason}`" without
   distinguishing `new/2` from `new!/2`; fixed in tasks.md).
 - `zero/1(currency_code)` → `Money.zero/1` (`lib/money.ex:3005`, real).
-- `add/2`, `sub/2` → `Money.add/2` / `Money.sub/2` (`lib/money.ex:1088,1161`,
-  real, confirmed mismatch-error-tuple contract).
-- `sum/2(money_list)` → **NOT** `Money.sum/2` (PE-5, BLOCKER: `Money.sum/2`'s
-  second argument is exchange RATES, defaulting to
-  `latest_rates_or_empty_map()`, and it converts each element via
-  `to_currency/3` — an FX-converting function, exactly what this library
-  must never expose). This library's own `sum/2` is self-reducing:
-  `Enum.reduce(money_list, fn m, acc -> with {:ok, acc} <- add(acc, m), do: acc end)`
-  over its OWN `add/2` (which errors on mismatch), never calling
-  `Money.sum/2`.
+- `add/2`, `sub/2`, `compare/2` — **corrected (PE-1, round-3 pre-execution,
+  BLOCKER):** `Money.add/2`/`Money.sub/2`/`Money.compare/2` do NOT return a
+  structured mismatch tuple on differing currencies — verified by direct
+  read, they return `{:error, {ArgumentError, "Cannot add monies with
+  different currencies. Received :EUR and :USD."}}`: an exception module
+  plus a prose string with the codes embedded as text, not the
+  `{:currency_mismatch, code_a, code_b}` shape this library's own spec
+  requires. Rather than parse that string, this library's own `add/2`
+  pattern-matches BOTH operands' `.currency` fields FIRST: same currency →
+  delegate to `Money.add/2` (now guaranteed same-currency, so ex_money's
+  function only ever receives inputs it cannot mismatch-error on);
+  different currencies → `{:error, {:currency_mismatch, currency_a,
+  currency_b}}` directly, returned by this library's own code, never
+  touching `Money.add/2` for that branch at all. `sub/2` and `compare/2`
+  follow the identical pattern. This mirrors `new/2`'s own precedent
+  (D1 above): intercept the cases this library owns a contract for BEFORE
+  delegating, rather than translate an upstream exception's prose.
+- `sum/2(money_list, currency)` — **corrected (PE-2, round-3
+  pre-execution, MAJOR):** the round-2 pseudocode
+  (`Enum.reduce(money_list, fn m, acc -> ... end)`, no seed) crashes on an
+  empty list (`Enum.EmptyError`, no seed value) and, for a 3+-element list
+  with a mismatch not in the final pair, feeds `{:error, _}` back into
+  `add/2` as if it were a `%Money{}`, raising `FunctionClauseError`. The
+  originally-intended second argument (proposal/design round 1: "over a
+  list, one stated currency") was dropped from the round-2 rewrite and is
+  restored here as `sum/2`'s real second parameter — the currency the sum
+  must be denominated in, also the seed:
+  ```
+  Enum.reduce_while(money_list, {:ok, zero(currency)}, fn m, {:ok, acc} ->
+    case add(acc, m) do
+      {:ok, _} = ok -> {:cont, ok}
+      {:error, _} = err -> {:halt, err}
+    end
+  end)
+  ```
+  An empty list returns `{:ok, zero(currency)}` (no crash, no undefined
+  behavior); a mismatch anywhere in the list halts immediately with this
+  library's own `add/2`'s structured error (never reaches a second `add/2`
+  call with a non-`%Money{}` accumulator). Never calls `Money.sum/2` (still
+  true, and still load-bearing: `Money.sum/2`'s second argument is exchange
+  RATES, defaulting to `latest_rates_or_empty_map()`, and it converts each
+  element via `to_currency/3` — an FX-converting function this library must
+  never expose).
 - `mult/2(money, number)` → `Money.mult/2` (`lib/money.ex:1239`, real,
   accepts integer/float/Decimal — this library's own `mult/2` refuses a
   float multiplier the same way `new/2` refuses a float amount, for the same
   no-float posture).
-- `compare/2`, `compare!/2` → `Money.compare/2` / `Money.compare!/2`
-  (`lib/money.ex:1967,2011`, real).
+- `compare/2` — see `add/2` above (same currency-check-first pattern).
+  **`compare!/2` is NOT shipped** (removed during round-3 pre-execution,
+  PE-6, MAJOR: it had no consumer citation anywhere in this change-set, and
+  was the only bang-arithmetic variant proposed — an unargued asymmetry that
+  D1's own stated principle, "no function ships speculatively," already
+  forbids. `add!/2`/`sub!/2` were never proposed either; consistency argues
+  for shipping none of the bang comparison/arithmetic variants until a real
+  consumer need names one).
 - `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
   (`lib/money.ex:2332` — **real signature is a keyword list, not a bare
   positional mode**, `:rounding_mode` key, verified from the function's own
@@ -160,15 +199,24 @@ three named consumers' documented needs:
   (`lib/money.ex:3160,3045`, real).
 - `format/1(money)` → `Money.to_string/1` (`lib/money.ex:831` — this
   library's own name; `ex_money` has no function literally named `format`).
-- `to_integer_exp/1(money)` and `from_integer/2(integer, currency_code)` —
-  this library's own names for `ex_money`'s real minor-unit conversion pair,
-  **not** `to_minor_units/1`/`from_minor_units/2` as the round-1 text
-  invented (PE-2, BLOCKER: `grep -rn "minor" lib/` over the real package
-  returns zero matches; no such API exists). `Money.to_integer_exp/2`
-  (`lib/money.ex:2825`) returns `{currency_code, integer, exponent,
-  remainder_money}` — this library's `to_integer_exp/1` delegates directly
-  (fixed options); `Money.from_integer/2` (`lib/money.ex:2912`) is the
-  reverse, delegated directly.
+  Returns `{:ok, string}` (ex_money's real return shape — verified; NOT a
+  bare string).
+- `to_integer_exp/1(money)` → `Money.to_integer_exp(money, rounding_mode:
+  MobusMoney.Currency.default_rounding_mode())` — **corrected (PE-3, round-3
+  pre-execution, MINOR):** `Money.to_integer_exp/2` rounds internally via
+  `Money.round/2`, whose own default is `:half_even`
+  (`lib/money.ex:86`); the round-2 text's "fixed options" never said the
+  house `:half_up` default must be threaded through explicitly — fixed here,
+  otherwise this one function would silently keep ex_money's native default,
+  the exact silent-default problem D3 exists to prevent. Returns
+  `{currency_code, integer, exponent, remainder_money}`
+  (`lib/money.ex:2825`) — **the exponent is the NEGATIVE of the digit
+  count** (e.g. `-2` for a 2-digit currency like USD; ex_money's own example:
+  `Money.to_integer_exp(Money.new(:USD, "200.00"))` → `{:USD, 20000, -2,
+  ...}`), passed through unmodified so this library's own sign convention
+  matches ex_money's documented one exactly, not an inverted house
+  convention. `from_integer/2(integer, currency_code)` → `Money.from_integer/2`
+  (`lib/money.ex:2912`), delegated directly (no internal rounding to pin).
 
 Alternative rejected: port a fresh struct from scratch (the superseded
 Atrapos `house-money-representation` D1). Correct at the time it was written,
@@ -295,10 +343,15 @@ supervision-tree timing, which is worse than an honest, always-loud
 
 ### D5. Persisted money is two columns and one schema helper (Ecto is optional)
 
-`MobusMoney.Schema.money_fields/1` declares `<name>_amount` (`numeric(28,8)`)
-and `<name>_currency` (`varchar(3)`) together on an Ecto schema;
-`MobusMoney.Schema.validate_money/2` (called from a changeset) enforces:
-both null or both non-null, currency valid per `MobusMoney.Currency.valid?/1`,
+`MobusMoney.Schema.money_fields/1(name)` declares `<name>_amount`
+(`numeric(28,8)`) and `<name>_currency` (`varchar(3)`) together on an Ecto
+schema, where `name` is the atom prefix a caller chooses (e.g. `:budget` →
+`budget_amount`/`budget_currency`). **Corrected (PE-5, round-3
+pre-execution, MINOR): the two functions that operate on a declared pair
+were never pinned to take the SAME `name` atom as their second argument —
+`MobusMoney.Schema.validate_money(changeset, name)` and
+`MobusMoney.Schema.read_money(struct, name)`** (called from a changeset)
+enforce: both null or both non-null, currency valid per `MobusMoney.Currency.valid?/1`,
 amount not negative.
 
 **Non-negativity, argued (F1.2, doc review round 1 — this was previously
@@ -499,15 +552,19 @@ un-shipped.
   non-`ex_money`-native value, not merely that a value is returned).
 - Schema helper (conditionally compiled, tested only when Ecto is present in
   the test env's deps): `money_fields/1` defines both columns;
-  `validate_money/2` rejects a half-set pair, an unknown currency, and a
-  negative amount; `read_money/2` returns `{:ok, nil}` for null/null,
-  `{:ok, money}` for a valid pair, and `{:error, :half_set_pair}` for a
-  pair with exactly one column set (constructed directly on a struct,
-  bypassing `validate_money/2`, to prove the reader itself refuses rather
-  than crashing); a guard test asserts `MobusMoney.Schema` does
-  not raise at compile time when Ecto is absent (simulated via
-  `Code.ensure_loaded?/1` stub, not by actually removing the test-env
-  dependency).
+  `validate_money(changeset, name)` rejects a half-set pair, an unknown
+  currency, and a negative amount; `read_money(struct, name)` returns
+  `{:ok, nil}` for null/null, `{:ok, money}` for a valid pair, and
+  `{:error, :half_set_pair}` for a pair with exactly one column set
+  (constructed directly on a struct, bypassing `validate_money/2`, to prove
+  the reader itself refuses rather than crashing). **Corrected (PE-4,
+  round-3 pre-execution, MINOR): the "Ecto absent" guard cannot be tested by
+  stubbing `Code.ensure_loaded?/1` — it is a compile-time-evaluated stdlib
+  function, already resolved by the time any ExUnit test runs, and cannot be
+  mocked.** The real coverage for "does not require Ecto to compile when
+  absent" is task 6.1's two separate `mix compile` runs (with and without
+  the optional dependency present) — this Testing section and tasks.md 4.5
+  now say so instead of naming an unimplementable unit test.
 - FX-disabled guard: `ensure_fx_disabled!/0` raises when the test env's
   config for `:ex_money` is unset or `true`, and returns `:ok` when it is
   explicitly `false` — both branches exercised, falsifying the raise path
