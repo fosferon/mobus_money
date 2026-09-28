@@ -2,10 +2,8 @@
 #
 # Consumed by: ~/.config/gc/tools/openspec-audit/bin/openspec-audit
 #
-# Scaffold only: the per-change keys (scoped_modules, forward_section_headers,
-# exclude_markers, ...) are authored with each change-set, after exact-text
-# verification. Nothing here suppresses a claim; a key that does is added only
-# for a provably non-claim span, never to manufacture a pass.
+# Current change: money-value-type (Bee GC-5588). scoped_modules below
+# resolve to the NEW modules this change adds (none pre-exist).
 
 # AST index for module/function resolution. This project's server is NOT yet
 # registered with gc_daemon, so the audit degrades to path-convention grep
@@ -18,3 +16,22 @@ ground_truth_sources:
     - openspec/changes/{change_name}/design.md
     - openspec/changes/{change_name}/tasks.md
     - "openspec/changes/{change_name}/specs/**/*.md"
+
+scoped_modules:
+  MobusMoney.Money: MobusMoney.Money
+  MobusMoney.Currency: MobusMoney.Currency
+  MobusMoney.Schema: MobusMoney.Schema
+
+# External identifiers this change cites that the audit's own AST index has
+# no way to resolve (ex_money is not yet a dependency until task 1.1 runs;
+# consumer files live in sibling repos this tool does not index).
+external_deps:
+  - Money
+  - Money.Currency
+  - Money.Ecto.Composite.Type
+  - Decimal
+
+accept_external_refs:
+  - "MobusCore.Money"
+  - "free_vrg_budget_cents"
+  - "vrg_cost_spent_cents"
