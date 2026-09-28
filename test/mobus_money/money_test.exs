@@ -135,4 +135,52 @@ defmodule MobusMoney.MoneyTest do
       refute MobusMoney.Money.zero?(Money.new(:EUR, "0.01"))
     end
   end
+
+  describe "round/2" do
+    test "defaults to the house :half_up mode" do
+      # JPY has 0 minor units: 100.5 rounds UP under the house default
+      assert MobusMoney.Money.round(Money.new(:JPY, "100.5")) == Money.new(:JPY, "101")
+    end
+
+    test "accepts an explicit mode override" do
+      assert MobusMoney.Money.round(Money.new(:JPY, "100.5"), :half_even) ==
+               Money.new(:JPY, "100")
+
+      assert MobusMoney.Money.round(Money.new(:EUR, "1.005"), :half_even) ==
+               Money.new(:EUR, "1.00")
+    end
+  end
+
+  describe "format/1" do
+    test "returns {:ok, string} for a 2-decimal currency" do
+      assert {:ok, s} = MobusMoney.Money.format(Money.new(:EUR, 1234))
+      assert is_binary(s) and s =~ "1,234.00"
+    end
+
+    test "returns {:ok, string} for a 0-decimal currency" do
+      assert {:ok, s} = MobusMoney.Money.format(Money.new(:JPY, 1234))
+      assert is_binary(s) and s =~ "1,234"
+      refute s =~ "1,234."
+    end
+  end
+
+  describe "to_integer_exp/1 and from_integer/2" do
+    test "returns minor units with the negative-digit-count exponent" do
+      assert {:USD, 20000, -2, _remainder} =
+               MobusMoney.Money.to_integer_exp(Money.new(:USD, "200.00"))
+    end
+
+    test "rounds to the minor unit with the house mode" do
+      # 0.005 USD: half_up -> 1 minor unit; ex_money's native half_even -> 0
+      assert {:USD, 1, -2, _} = MobusMoney.Money.to_integer_exp(Money.new(:USD, "0.005"))
+
+      assert {:USD, 0, -2, _} =
+               Money.to_integer_exp(Money.new(:USD, "0.005"), rounding_mode: :half_even)
+    end
+
+    test "from_integer/2 reads the per-currency exponent from the registry" do
+      assert MobusMoney.Money.from_integer(20000, :USD) == Money.new(:USD, "200.00")
+      assert MobusMoney.Money.from_integer(20012, :IQD) == Money.new(:IQD, "20.012")
+    end
+  end
 end

@@ -83,7 +83,7 @@
       entirely this library's own, not inherited (round-4 PE-2 — task 3.4's
       falsifying-test list must actually exercise this, see below).
       `negative?/1`/`zero?/1` → `Money.negative?/1`/`Money.zero?/1`.
-- [ ] 3.3 `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
+- [x] 3.3 `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
       (real signature is a KEYWORD LIST, not a bare positional mode — PE-1
       area finding), mode defaults to
       `MobusMoney.Currency.default_rounding_mode/0`; `format/1` →

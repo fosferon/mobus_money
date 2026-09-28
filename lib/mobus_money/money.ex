@@ -189,4 +189,64 @@ defmodule MobusMoney.Money do
   """
   @spec zero?(t()) :: boolean()
   def zero?(%Money{} = money), do: Money.zero?(money)
+
+  @doc """
+  Rounds the amount to the currency's minor-unit exponent.
+
+  `mode` defaults to `MobusMoney.Currency.default_rounding_mode/0` (`:half_up`,
+  this library's house default — design D3), an explicit override of
+  ex_money's own native `:half_even`, which remains reachable via
+  `round(money, :half_even)`. Passes through to
+  `Money.round(money, rounding_mode: mode)` — ex_money's real signature is
+  a keyword list, not a bare positional mode.
+
+  ## Examples
+
+      iex> m = Money.new(:JPY, "100.5")
+      iex> MobusMoney.Money.round(m)
+      Money.new(:JPY, "101")
+      iex> MobusMoney.Money.round(m, :half_even)
+      Money.new(:JPY, "100")
+  """
+  @spec round(t(), Money.rounding_mode()) :: t()
+  def round(%Money{} = money, mode \\ MobusMoney.Currency.default_rounding_mode()) do
+    Money.round(money, rounding_mode: mode)
+  end
+
+  @doc """
+  Formats the money value for display: `{:ok, string}`.
+
+  ex_money's real `Money.to_string/1` return shape, passed through.
+  """
+  @spec format(t()) :: {:ok, String.t()}
+  def format(%Money{} = money), do: Money.to_string(money)
+
+  @doc """
+  Converts to minor units: `{currency_code, integer, exponent, remainder}`.
+
+  `exponent` is the NEGATIVE of the currency's digit count (`-2` for USD),
+  ex_money's own convention, passed through unmodified. Rounding to reach
+  the minor unit applies this library's house mode (`:half_up`) explicitly
+  — never ex_money's native `:half_even`, which would silently override
+  the house default (design D1, PE-3 fold).
+
+  ## Examples
+
+      iex> MobusMoney.Money.to_integer_exp(Money.new(:USD, "200.00"))
+      {:USD, 20000, -2, Money.new(:USD, "0.00")}
+  """
+  @spec to_integer_exp(t()) ::
+          {Money.Currency.code(), integer(), integer(), t()}
+  def to_integer_exp(%Money{} = money) do
+    Money.to_integer_exp(money, rounding_mode: MobusMoney.Currency.default_rounding_mode())
+  end
+
+  @doc """
+  Builds a money value from an integer minor-unit amount (ex_money's own
+  minor-unit pair with `to_integer_exp/1`), delegated directly — ex_money
+  reads the correct per-currency exponent from its registry (IQD is
+  3-digit: `Money.from_integer(20012, :IQD)` is `20.012` IQD).
+  """
+  @spec from_integer(integer(), Money.Currency.code()) :: t()
+  def from_integer(amount, currency_code), do: Money.from_integer(amount, currency_code)
 end
