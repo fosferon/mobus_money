@@ -49,6 +49,7 @@ defmodule MobusMoney.Schema do
 
     See the moduledoc for the migration shape.
     """
+    @spec money_fields(atom()) :: Macro.t()
     defmacro money_fields(name) when is_atom(name) do
       quote do
         field(:"#{unquote(name)}_amount", :decimal)
@@ -67,6 +68,7 @@ defmodule MobusMoney.Schema do
     reaching a persisted magnitude column undetected is exactly what this
     rejects. `name` is the same atom prefix `money_fields/1` declared.
     """
+    @spec validate_money(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
     def validate_money(%Ecto.Changeset{} = changeset, name) when is_atom(name) do
       amount_field = field_name(name, :amount)
       currency_field = field_name(name, :currency)
@@ -125,6 +127,10 @@ defmodule MobusMoney.Schema do
 
     defp negative?(%Decimal{} = amount), do: Decimal.negative?(amount)
     defp negative?(amount) when is_integer(amount), do: amount < 0
+    # A raw float can only arrive via put_change/2 (cast coerces to
+    # Decimal) — outside Ecto's :decimal contract, but a validation error
+    # beats a FunctionClauseError crash at the changeset boundary.
+    defp negative?(amount) when is_float(amount), do: amount < 0
 
     @doc """
     Builds one `MobusMoney.Money` from the `name` pair on a schema struct.
@@ -137,6 +143,10 @@ defmodule MobusMoney.Schema do
     backfill, a hand-written fixture); a named error is strictly better
     than an unreachable-in-theory crash (design D5, PE-3 fold).
     """
+    @spec read_money(struct(), atom()) ::
+            {:ok, MobusMoney.Money.t() | nil}
+            | {:error, {:half_set_pair, :amount | :currency}}
+            | {:error, MobusMoney.Money.error_reason()}
     def read_money(%{__struct__: _} = struct, name) when is_atom(name) do
       amount = Map.get(struct, field_name(name, :amount))
       currency = Map.get(struct, field_name(name, :currency))

@@ -110,6 +110,20 @@ defmodule MobusMoney.SchemaTest do
 
       assert zero_changeset.valid?
     end
+
+    test "a raw float amount placed via put_change (bypassing cast) errors, never raises" do
+      # cast coerces to Decimal, so a raw float can only arrive via
+      # put_change/2; pre-fix this path hit negative?/1's FunctionClauseError
+      changeset =
+        %Budget{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_change(:budget_amount, -1.5)
+        |> Ecto.Changeset.put_change(:budget_currency, "EUR")
+        |> MobusMoney.Schema.validate_money(:budget)
+
+      refute changeset.valid?
+      assert Keyword.has_key?(changeset.errors, :budget_amount)
+    end
   end
 
   describe "read_money/2" do
