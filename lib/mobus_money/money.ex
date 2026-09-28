@@ -78,4 +78,115 @@ defmodule MobusMoney.Money do
       {:error, reason} -> raise InvalidMoneyError, reason: reason
     end
   end
+
+  @doc """
+  Returns the zero amount of `currency_code`.
+
+  `Money.zero/1` returns a bare money value on success but an error tuple
+  for an unknown code; this function normalizes both into the same
+  two-shape contract as `new/2`: `{:ok, money}` | `{:error, :unknown_currency}`.
+  """
+  @spec zero(Money.Currency.code()) :: {:ok, t()} | {:error, :unknown_currency}
+  def zero(currency_code) do
+    case Money.zero(currency_code) do
+      %Money{} = money -> {:ok, money}
+      {:error, _} -> {:error, :unknown_currency}
+    end
+  end
+
+  @doc """
+  Adds two money values of the SAME currency: `{:ok, sum}`.
+
+  Different currencies return `{:error, {:currency_mismatch, code_a,
+  code_b}}` — produced by this library's own check of both operands'
+  currencies BEFORE any delegation, never by translating ex_money's
+  `{:error, {ArgumentError, prose}}`. No conversion is ever performed.
+  """
+  @spec add(t(), t()) :: {:ok, t()} | {:error, {:currency_mismatch, atom(), atom()}}
+  def add(%Money{currency: c} = a, %Money{currency: c} = b), do: Money.add(a, b)
+
+  def add(%Money{currency: ca}, %Money{currency: cb}),
+    do: {:error, {:currency_mismatch, ca, cb}}
+
+  @doc """
+  Subtracts `b` from `a`; same currency-check-first contract as `add/2`.
+  """
+  @spec sub(t(), t()) :: {:ok, t()} | {:error, {:currency_mismatch, atom(), atom()}}
+  def sub(%Money{currency: c} = a, %Money{currency: c} = b), do: Money.sub(a, b)
+
+  def sub(%Money{currency: ca}, %Money{currency: cb}),
+    do: {:error, {:currency_mismatch, ca, cb}}
+
+  @doc """
+  Compares two money values of the SAME currency: `:lt`, `:eq`, or `:gt`.
+
+  Different currencies return `{:error, {:currency_mismatch, code_a,
+  code_b}}`, same contract as `add/2` — never a converted comparison.
+  """
+  @spec compare(t(), t()) ::
+          :lt | :eq | :gt | {:error, {:currency_mismatch, atom(), atom()}}
+  def compare(%Money{currency: c} = a, %Money{currency: c} = b), do: Money.compare(a, b)
+
+  def compare(%Money{currency: ca}, %Money{currency: cb}),
+    do: {:error, {:currency_mismatch, ca, cb}}
+
+  @doc """
+  Folds `money_list` into one total denominated in `currency`, without
+  converting any element.
+
+  Any element whose currency differs from `currency` halts the fold
+  immediately with this library's own `{:error, {:currency_mismatch,
+  code_a, code_b}}`. An unknown `currency` returns `{:error,
+  :unknown_currency}` before the list is touched (the seed is validated
+  first). An empty list returns the zero of `currency`, never a crash.
+
+  Never delegates to `Money.sum/2` — its second argument is exchange rates
+  and it converts via `to_currency/3`, which this library must never do.
+  """
+  @spec sum([t()], Money.Currency.code()) ::
+          {:ok, t()}
+          | {:error, :unknown_currency}
+          | {:error, {:currency_mismatch, atom(), atom()}}
+  def sum(money_list, currency) do
+    case zero(currency) do
+      {:error, _} = err ->
+        err
+
+      {:ok, seed} ->
+        Enum.reduce_while(money_list, {:ok, seed}, fn m, {:ok, acc} ->
+          case add(acc, m) do
+            {:ok, _} = ok -> {:cont, ok}
+            {:error, _} = err -> {:halt, err}
+          end
+        end)
+    end
+  end
+
+  @doc """
+  Multiplies a money value by `number` (integer or `Decimal`).
+
+  A float multiplier returns `{:error, :float_amount}` — the same no-float
+  posture as `new/2`. Note the guard is entirely this library's own:
+  `Money.mult/2` itself accepts floats (`Decimal.from_float/1`), so nothing
+  upstream enforces it.
+  """
+  @spec mult(t(), integer() | Decimal.t()) :: {:ok, t()} | {:error, :float_amount}
+  def mult(%Money{} = _money, number) when is_float(number), do: {:error, :float_amount}
+
+  def mult(%Money{} = money, number), do: Money.mult(money, number)
+
+  @doc """
+  Returns `true` when the money value is strictly negative.
+
+  Negatives exist in-memory (e.g. `sub/2` overdraw); the storage-pair
+  convention (`MobusMoney.Schema`) is what rejects persisting them.
+  """
+  @spec negative?(t()) :: boolean()
+  def negative?(%Money{} = money), do: Money.negative?(money)
+
+  @doc """
+  Returns `true` when the money value is exactly zero.
+  """
+  @spec zero?(t()) :: boolean()
+  def zero?(%Money{} = money), do: Money.zero?(money)
 end

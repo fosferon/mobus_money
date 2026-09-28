@@ -71,4 +71,68 @@ defmodule MobusMoney.MoneyTest do
       end
     end
   end
+
+  describe "zero/1" do
+    test "returns {:ok, zero money} for a known currency" do
+      assert MobusMoney.Money.zero(:EUR) == {:ok, Money.new(:EUR, 0)}
+    end
+
+    test "returns {:error, :unknown_currency} for an unknown code" do
+      assert MobusMoney.Money.zero(:NOPE) == {:error, :unknown_currency}
+    end
+  end
+
+  describe "add/2, sub/2, compare/2" do
+    test "same-currency operands delegate to ex_money" do
+      assert MobusMoney.Money.add(Money.new(:EUR, "1.10"), Money.new(:EUR, "2.20")) ==
+               {:ok, Money.new(:EUR, "3.30")}
+
+      assert MobusMoney.Money.sub(Money.new(:EUR, "3.30"), Money.new(:EUR, "1.10")) ==
+               {:ok, Money.new(:EUR, "2.20")}
+
+      assert MobusMoney.Money.compare(Money.new(:EUR, "1.10"), Money.new(:EUR, "2.20")) ==
+               :lt
+
+      assert MobusMoney.Money.compare(Money.new(:EUR, "2.20"), Money.new(:EUR, "2.20")) ==
+               :eq
+
+      assert MobusMoney.Money.compare(Money.new(:EUR, "3.30"), Money.new(:EUR, "2.20")) ==
+               :gt
+    end
+
+    test "mixed currencies error with both codes, never a converted value" do
+      mismatch = {:error, {:currency_mismatch, :EUR, :USD}}
+
+      assert MobusMoney.Money.add(Money.new(:EUR, 1), Money.new(:USD, 1)) == mismatch
+      assert MobusMoney.Money.sub(Money.new(:EUR, 1), Money.new(:USD, 1)) == mismatch
+      assert MobusMoney.Money.compare(Money.new(:EUR, 1), Money.new(:USD, 1)) == mismatch
+    end
+  end
+
+  describe "sum/2" do
+    test "folds a same-currency list into one total" do
+      assert MobusMoney.Money.sum([Money.new(:EUR, "1.10"), Money.new(:EUR, "2.20")], :EUR) ==
+               {:ok, Money.new(:EUR, "3.30")}
+    end
+  end
+
+  describe "mult/2" do
+    test "multiplies by an integer or Decimal" do
+      assert MobusMoney.Money.mult(Money.new(:EUR, "1.25"), 3) ==
+               {:ok, Money.new(:EUR, "3.75")}
+
+      assert MobusMoney.Money.mult(Money.new(:EUR, "1.25"), Decimal.new("0.5")) ==
+               {:ok, Money.new(:EUR, "0.625")}
+    end
+  end
+
+  describe "negative?/1 and zero?/1" do
+    test "classify the value" do
+      assert MobusMoney.Money.negative?(Money.new(:EUR, "-1.00"))
+      refute MobusMoney.Money.negative?(Money.new(:EUR, "1.00"))
+
+      assert MobusMoney.Money.zero?(Money.new(:EUR, 0))
+      refute MobusMoney.Money.zero?(Money.new(:EUR, "0.01"))
+    end
+  end
 end

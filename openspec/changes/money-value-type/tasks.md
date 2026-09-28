@@ -48,7 +48,7 @@
       `{:error, :unparseable_amount}`. `new!/2` (PL-1 — the spec requires
       this to RAISE, not return a tuple): raises `MobusMoney.InvalidMoneyError`
       with the reason from `new/2`.
-- [ ] 3.2 `zero/1` → `Money.zero/1`, returning `{:ok, money} |
+- [x] 3.2 `zero/1` → `Money.zero/1`, returning `{:ok, money} |
       {:error, :unknown_currency}` (round-4 PE-1 — `Money.zero/2` validates
       the currency first and can itself error; not a bare `Money` return).
       `add/2`/`sub/2`/`compare/2` (round-3 pre-execution PE-1, BLOCKER —
