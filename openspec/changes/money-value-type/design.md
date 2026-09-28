@@ -7,12 +7,14 @@ the epic's (GC-5586) narrative summary of them.
 
 ## Ground-truth check (non-forward — every citation below must resolve on the branch as authored)
 
-- `~/Sites/atrapos` (this scaffold's sibling checkout registry does not
-  reach it directly; verified via the atrapos worktree at
-  `.worktrees/4953-house-money`): `lib/atrapos/agents/agent.ex` and
-  `lib/atrapos/tenants/tenant.ex` carry a per-entity API budget as an
-  integer cent column defaulting to zero; `lib/atrapos/billing/usage_record.ex`
-  carries an integer cost in cents; `lib/atrapos/workers/spend_aggregator.ex`
+- Atrapos, verified via the worktree at
+  `~/Sites/atrapos/.worktrees/4953-house-money`:
+  `~/Sites/atrapos/.worktrees/4953-house-money/lib/atrapos/agents/agent.ex` and
+  `~/Sites/atrapos/.worktrees/4953-house-money/lib/atrapos/tenants/tenant.ex`
+  carry a per-entity API budget as an integer cent column defaulting to zero;
+  `~/Sites/atrapos/.worktrees/4953-house-money/lib/atrapos/billing/usage_record.ex`
+  carries an integer cost in cents;
+  `~/Sites/atrapos/.worktrees/4953-house-money/lib/atrapos/workers/spend_aggregator.ex`
   divides a cent sum by `100.0`. (Full citation list: the superseded
   `openspec/changes/house-money-representation/design.md` in that repo,
   Ground-truth section — reused here only as a pointer, not copied, since
@@ -75,7 +77,8 @@ directly (citations above); none is unread.
   adoption time (not filed here — no OTP floor to build against yet).
 - **sil-diary4** (`~/Sites/integrated.living/sil-diary4`). Holds today: no
   money type; `free_vrg_budget_cents` and `vrg_cost_spent_cents` as bare
-  integers in `lib/diary4/session_manager.ex`, config, and a DB row. Already
+  integers in `~/Sites/integrated.living/sil-diary4/lib/diary4/session_manager.ex`,
+  config, and a DB row. Already
   on `erlang 28.4.2` — no OTP blocker. Migration this change asks of it: adopt
   `MobusMoney.Schema.money_fields/1` for the two budget/cost pairs in its own
   follow-up change-set. Not built here.
@@ -244,9 +247,10 @@ action, out of band, after merge — recorded as a task, not automated).
 - **Other minor-unit exponents.** JPY (0 decimals) versus EUR/USD/GBP (2)
   versus a currency with 3 (e.g. BHD, in the full ISO set this library now
   carries). Addressed: `ex_money`'s own registry carries the correct exponent
-  per code; `MobusMoney.Currency.exponent/1` reads it, never hardcodes it —
-  the defect the superseded Atrapos design's hardcoded five-entry table would
-  have reintroduced for any currency outside its list.
+  per code; the currency registry's exponent reader (D1's public surface)
+  reads it, never hardcodes it — the defect the superseded Atrapos design's
+  hardcoded five-entry table would have reintroduced for any currency outside
+  its list.
 - **Other rounding modes.** Half-up (D3's default), half-even (`ex_money`'s
   native default, still reachable via an explicit argument), and the other
   modes `Decimal.round/3` supports (`:down`, `:up`, `:ceiling`, `:floor`).

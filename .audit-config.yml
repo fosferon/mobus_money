@@ -22,16 +22,36 @@ scoped_modules:
   MobusMoney.Currency: MobusMoney.Currency
   MobusMoney.Schema: MobusMoney.Schema
 
-# External identifiers this change cites that the audit's own AST index has
-# no way to resolve (ex_money is not yet a dependency until task 1.1 runs;
-# consumer files live in sibling repos this tool does not index).
-external_deps:
-  - Money
-  - Money.Currency
-  - Money.Ecto.Composite.Type
-  - Decimal
+# R8 section-aware forward classification. Setting this key REPLACES the
+# tool's built-in default list (verified: verifier.py does config.get(key,
+# DEFAULT), no merge), so the full default set is repeated here, plus one
+# addition: numbered Decision headings (`### D1. Title`, this repo's
+# AGENTS.md-mandated convention — the period, not an em-dash, is what this
+# pattern matches). This is this library's FIRST change-set: every module it
+# names (MobusMoney.Money/.Currency/.Schema) is new code described inside a
+# `### D<n>. ` heading, so without this addition every decision's own
+# function/file citations ghost on Stage 0b before task 1 has run a single
+# line of implementation.
+forward_section_headers:
+  - "New code"
+  - "Impact"
+  - "New files?"
+  - "Files to create"
+  - "Implementation"
+  - "To be implemented"
+  - "Forward[- ]looking"
+  - "What Changes"
+  - "Goals?"
+  - "Requirement"
+  - "^D\\d+\\."
+  - "^Consumers"
+  - "\\(D\\d+"
 
-accept_external_refs:
-  - "MobusCore.Money"
-  - "free_vrg_budget_cents"
-  - "vrg_cost_spent_cents"
+# File-path claims this change cites that live outside this repo. The tool's
+# own built-in rule already classifies any "~/Sites/..." file_path claim as
+# UNVERIFIABLE (not a ghost) — verified by reading verifier.py's
+# _check_external_ref/_verify_file_path before adding this key, so it is not
+# needed for the consumer citations in design.md's Ground-truth section
+# (those are absolute ~/Sites/... paths already). Left empty: nothing here
+# is a provably-non-claim span requiring suppression.
+accept_external_refs: {}

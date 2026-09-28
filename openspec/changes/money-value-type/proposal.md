@@ -6,13 +6,15 @@ Three fosferon projects handle money today and none of them do it safely:
   integer cent columns (`api_budget_cents`, `cost_cents`), with the currency
   living only in the column name and USD assumed everywhere by convention,
   never by a type. A platform budget envelope divides a cent sum by `100.0`.
-- **MOBuS** (`mobus_core/lib/mobus_core/money.ex`, 388 lines, verified in this
-  repo) is closer but still loose: `round/2` turns a float into a Decimal
-  silently and turns `nil` into `Decimal.new(0)` — a missing amount and a real
-  zero become indistinguishable — and the currency is a hardcoded EUR default
-  with no registry-backed validation of what else is legal.
+- **MOBuS** (`~/Sites/mobus/mobus_umbrella/apps/mobus_core/lib/mobus_core/money.ex`,
+  388 lines, verified by direct read) is closer but still loose: `round/2`
+  turns a float into a Decimal silently and turns `nil` into `Decimal.new(0)`
+  — a missing amount and a real zero become indistinguishable — and the
+  currency is a hardcoded EUR default with no registry-backed validation of
+  what else is legal.
 - **sil-diary4** has no money handling at all: `free_vrg_budget_cents` and
-  `vrg_cost_spent_cents` (verified in `lib/diary4/session_manager.ex`) are
+  `vrg_cost_spent_cents` (verified by direct grep of
+  `~/Sites/integrated.living/sil-diary4/lib/diary4/session_manager.ex`) are
   bare integers, same defect as Atrapos, independently arrived at.
 
 Operator ruling 2026-09-06 (Atrapos): "an unaudited FX conversion is
