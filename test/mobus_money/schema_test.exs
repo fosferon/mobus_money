@@ -111,4 +111,20 @@ defmodule MobusMoney.SchemaTest do
       assert zero_changeset.valid?
     end
   end
+
+  describe "read_money/2" do
+    test "returns {:ok, nil} for a null/null pair" do
+      assert MobusMoney.Schema.read_money(%Budget{}, :budget) == {:ok, nil}
+    end
+
+    test "returns {:ok, money} for a valid pair" do
+      budget = %Budget{
+        budget_amount: Decimal.new("19.99"),
+        budget_currency: "EUR"
+      }
+
+      assert {:ok, money} = MobusMoney.Schema.read_money(budget, :budget)
+      assert money == Money.new(:EUR, "19.99")
+    end
+  end
 end

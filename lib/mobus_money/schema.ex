@@ -126,6 +126,36 @@ defmodule MobusMoney.Schema do
     defp negative?(%Decimal{} = amount), do: Decimal.negative?(amount)
     defp negative?(amount) when is_integer(amount), do: amount < 0
 
+    @doc """
+    Builds one `MobusMoney.Money` from the `name` pair on a schema struct.
+
+    Returns `{:ok, nil}` for a null/null pair, `{:ok, money}` for a set
+    pair, and `{:error, {:half_set_pair, missing_field}}` — where
+    `missing_field` is `:amount` or `:currency`, whichever column is nil —
+    for a pair with exactly one column set, NEVER a raise. A half-set pair
+    is reachable outside `validate_money/2`'s reach (raw SQL, a migration
+    backfill, a hand-written fixture); a named error is strictly better
+    than an unreachable-in-theory crash (design D5, PE-3 fold).
+    """
+    def read_money(%{__struct__: _} = struct, name) when is_atom(name) do
+      amount = Map.get(struct, field_name(name, :amount))
+      currency = Map.get(struct, field_name(name, :currency))
+
+      case {amount, currency} do
+        {nil, nil} ->
+          {:ok, nil}
+
+        {nil, _currency} ->
+          {:error, {:half_set_pair, :amount}}
+
+        {_amount, nil} ->
+          {:error, {:half_set_pair, :currency}}
+
+        {amount, currency} ->
+          MobusMoney.Money.new(amount, currency)
+      end
+    end
+
     defp field_name(name, :amount), do: :"#{name}_amount"
     defp field_name(name, :currency), do: :"#{name}_currency"
   end
