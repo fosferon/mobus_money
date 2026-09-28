@@ -8,7 +8,7 @@
       the consumer's own `Application.start/2` (D4 — corrected during doc
       review: a library's own `config/config.exs` is never loaded by Mix for
       a consuming application, so no config file ships here).
-- [ ] 1.3 `openspec/specs/money/spec.md` delta authored (this change-set's
+- [x] 1.3 `openspec/specs/money/spec.md` delta authored (this change-set's
       spec deltas, folded on archive).
 - [ ] 1.4 `config/config.exs` (THIS repo's own, distinct from D4's
       no-config-for-consumers rule — Mix DOES load config/config.exs for the
