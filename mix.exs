@@ -28,11 +28,13 @@ defmodule MobusMoney.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Runtime dependencies are added by the change-set that needs them, not
-  # here: the ex_money dependency (and its OTP 27+ floor) is a decision that
-  # lives in openspec/changes/, not in the scaffold.
   defp deps do
     [
+      {:ex_money, "~> 6.2"},
+      # Ecto is optional: consumers needing only the value type and arithmetic
+      # are not forced onto it, and MobusMoney.Schema compiles to a stub when
+      # it is absent (design.md D5).
+      {:ecto, "~> 3.10", optional: true},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false}
     ]
   end
