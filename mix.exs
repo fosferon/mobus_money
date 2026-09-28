@@ -40,7 +40,7 @@ defmodule MobusMoney.MixProject do
   end
 
   defp description do
-    "Currency-aware money for the fosferon ecosystem: a value type that carries its currency, explicit rounding, and an amount+currency storage pair"
+    "Currency-aware money for Elixir: a value type that carries its currency, an explicit house rounding rule, and an amount+currency storage pair"
   end
 
   defp package do

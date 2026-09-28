@@ -1,26 +1,21 @@
 # mobus_money
 
-Currency-aware money for the fosferon ecosystem (Atrapos, MOBuS, sil-diary4):
-a value type whose amount and currency always travel together, an explicit
-house rounding rule, and a two-column amount+currency storage convention —
-one opinionated layer over [`ex_money`](https://hexdocs.pm/ex_money) 6.x,
-shared by every consumer instead of fixed three times independently.
+Currency-aware money for Elixir: a value type whose amount and currency
+always travel together, an explicit house rounding rule, and a two-column
+amount+currency storage convention — one opinionated layer over
+[`ex_money`](https://hexdocs.pm/ex_money) 6.x, built once instead of fixed
+independently in every consumer.
 
-**Status: v0.1.0 implemented (change-set `money-value-type`, Bee GC-5588).**
-Hex publish (`mix hex.publish`, 0.1.0) is an operator action after merge —
-until it lands, no consumer may take a path dependency on this repository.
+**Status: v0.1.0, published on Hex.**
 
-The rulings that created it (2026-09-06 and 2026-09-26, tracked as Bee
-GC-5586):
+The rulings that shaped it:
 
 - Amount and currency travel together; a bare integer with the currency
   baked into its name is the defect this library removes.
 - "An unaudited FX conversion is indistinguishable from an undisclosed
   markup" — no FX capability ships here, ever silently.
-- One opinionated layer over `ex_money` 6.x, built once, so the ecosystem
+- One opinionated layer over `ex_money` 6.x, built once, so every consumer
   has one representation and one rounding rule.
-- Consumers: Atrapos first; MOBuS (which must move off OTP 26 first,
-  GC-5587); sil-diary4.
 
 ## Required consumer configuration (read this first)
 
@@ -116,14 +111,14 @@ to a stub and the value type works unchanged.
 
 ## Out of scope, declared forward
 
-- Multi-currency conversion / FX rates (GC-5708) — the ruling forbids
+- Multi-currency conversion / FX rates — the ruling forbids
   silent conversion; a future two-leg feature is its own change.
 - Signed persisted balances (a credit, a refund, a running account balance)
   — `money_fields/1`'s non-negativity is scoped to magnitudes by design.
-- `mobus_billing` (payment gateways, webhook dedupe) and `mobus_ledger`
-  (issued-document numbering) — planned sibling libraries, not built here.
+- Payment-gateway integration and issued-document numbering are planned
+  sibling libraries, not built here.
 
-## Installation (once published)
+## Installation
 
 ```elixir
 def deps do
@@ -132,8 +127,6 @@ def deps do
   ]
 end
 ```
-
-No path dependencies on this repository (GC-5584 precedent).
 
 ## License
 
