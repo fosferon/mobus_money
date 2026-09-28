@@ -156,7 +156,7 @@
       optional Ecto dependency present (two compile runs).
 - [x] 6.2 Full suite green.
 - [ ] 6.3 `openspec-audit` (Stage 0b) ghost_count 0.
-- [ ] 6.4 `README.md` updated: scaffold-only language removed, public API
+- [x] 6.4 `README.md` updated: scaffold-only language removed, public API
       summarized, "Status: scaffold only" replaced with the published
       version once hex-published (task 6.5). **States the required consumer
       config line verbatim** (`config :ex_money,
