@@ -62,7 +62,6 @@ perform a currency conversion.
   `currency` argument that is not a known currency code
 - **THEN** it returns `{:error, :unknown_currency}` without evaluating any
   list element
-  without evaluating the third element
 
 ### Requirement: A consumer's disabled FX service is asserted at boot, loudly
 
