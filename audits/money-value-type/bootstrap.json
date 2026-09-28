@@ -1,0 +1,13 @@
+{
+  "ready": true,
+  "spec_files": [
+    "proposal.md",
+    "design.md",
+    "tasks.md"
+  ],
+  "roadmap_files": [],
+  "branch": "gc/5588-mobus-money-v0.1",
+  "branch_head": "4ac2a90dffbe9a8991de73c1d0e09082b2451e10",
+  "master_head": "8182fa9df26ee971699553ef5ec5bb2ce0160831",
+  "issues": []
+}
