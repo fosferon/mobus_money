@@ -38,7 +38,7 @@
 
 ## 3. Value type (D1)
 
-- [ ] 3.1 `MobusMoney.Money.new/2(amount, currency_code)`: matches `nil` and
+- [x] 3.1 `MobusMoney.Money.new/2(amount, currency_code)`: matches `nil` and
       `is_float(amount)` directly (returns `{:error, :nil_amount}` /
       `{:error, :float_amount}` WITHOUT calling `ex_money` — this library
       owns this contract, not a translation of `ex_money`'s exception text);
