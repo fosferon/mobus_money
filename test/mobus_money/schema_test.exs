@@ -126,5 +126,21 @@ defmodule MobusMoney.SchemaTest do
       assert {:ok, money} = MobusMoney.Schema.read_money(budget, :budget)
       assert money == Money.new(:EUR, "19.99")
     end
+
+    test "a directly-constructed half-set pair (bypassing validate_money/2) errors, never crashes" do
+      # Constructed directly on the struct — the path a raw-SQL row, a
+      # migration backfill, or a hand-written fixture takes; the reader
+      # itself must refuse rather than crash (spec R5's own scenario,
+      # round-4 PE-2)
+      amount_only = %Budget{budget_amount: Decimal.new("19.99"), budget_currency: nil}
+
+      assert MobusMoney.Schema.read_money(amount_only, :budget) ==
+               {:error, {:half_set_pair, :currency}}
+
+      currency_only = %Budget{budget_amount: nil, budget_currency: "EUR"}
+
+      assert MobusMoney.Schema.read_money(currency_only, :budget) ==
+               {:error, {:half_set_pair, :amount}}
+    end
   end
 end

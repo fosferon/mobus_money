@@ -127,7 +127,7 @@
       which-column-is-missing diagnostic design.md itself claims; fixed to
       name `:amount` or `:currency`) for exactly one column set (PE-3-prior
       — reachable outside `validate_money/2`, e.g. raw SQL; must not crash).
-- [ ] 4.5 Falsifying tests: half-set pair rejected (at the `validate_money/2`
+- [x] 4.5 Falsifying tests: half-set pair rejected (at the `validate_money/2`
       changeset boundary), unknown currency rejected, negative amount
       rejected, null/null reads as `{:ok, nil}`, **`read_money/2` called on
       a struct constructed directly with exactly one column set (bypassing
