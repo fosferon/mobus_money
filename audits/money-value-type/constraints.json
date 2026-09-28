@@ -1,0 +1,400 @@
+{
+  "extracted_at": "2026-09-28T07:16:03.169214+00:00",
+  "project_cwd": "/Users/leonidas/Sites/ex_libs/mobus_money/.worktrees/5588-mobus-money-v0.1",
+  "sources_read": [
+    "openspec/changes/money-value-type/proposal.md",
+    "openspec/changes/money-value-type/design.md",
+    "openspec/changes/money-value-type/tasks.md",
+    "openspec/changes/money-value-type/specs/money/spec.md"
+  ],
+  "constraints": [
+    {
+      "file": "openspec/changes/money-value-type/proposal.md",
+      "line": 8,
+      "section": "Why",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "never by a type. A platform budget envelope divides a cent sum by `100.0`.",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/proposal.md",
+      "line": 22,
+      "section": "Why",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "and carry its own currency, never a bare number whose unit lives in a variable",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 37,
+      "section": "Ground-truth check (non-forward — every citation below must resolve on the branch as authored)",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "never converting; arithmetic is exact (no float intermediate); rounding",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 176,
+      "section": "D4. No FX by construction, not by convention",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "simply never call `Money.to_currency/2`. Unused capability that starts a",
+      "has_rationale": true
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 179,
+      "section": "D4. No FX by construction, not by convention",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "from an undisclosed markup\") argues against — if it is never audited because",
+      "has_rationale": true
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 180,
+      "section": "D4. No FX by construction, not by convention",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "it is never used, it should not be reachable at all.",
+      "has_rationale": true
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 224,
+      "section": "D6. Configuration is explicit arguments, never `Application.get_env` for per-call behavior",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "must not"
+      ],
+      "text": "but this library must not assume otherwise) must not let one consumer's",
+      "has_rationale": true
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 251,
+      "section": "1. What other cases of this problem exist?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "reads it, never hardcodes it — the defect the superseded Atrapos design's",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 262,
+      "section": "1. What other cases of this problem exist?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "out of scope"
+      ],
+      "text": "v0.1; a consumer needing a different shape is out of scope below.",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 274,
+      "section": "2. Are they addressed by this slice, or out of scope?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "out of scope"
+      ],
+      "text": "A different storage shape than two columns: out of scope. No named",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 279,
+      "section": "2. Are they addressed by this slice, or out of scope?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "out of scope"
+      ],
+      "text": "Multi-currency conversion / FX rates: explicitly out of scope, tracked as",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 286,
+      "section": "2. Are they addressed by this slice, or out of scope?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "out of scope"
+      ],
+      "text": "(issued-document numbering): out of scope, not built here, no Bee needed",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 297,
+      "section": "3. Why is the asymmetry safe to ship?",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "says must never happen silently — withholding it is not a gap relative to",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 327,
+      "section": "Testing",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "behavior — verified, not assumed); nil is never zero; exact arithmetic",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/design.md",
+      "line": 330,
+      "section": "Testing",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "never"
+      ],
+      "text": "carrying both codes and never a converted value; rounding by minor-unit",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 5,
+      "section": "Requirement: Money is a currency-carrying value type, never a bare number",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "The system SHALL expose `MobusMoney.Money` as a value type wrapping",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 7,
+      "section": "Requirement: Money is a currency-carrying value type, never a bare number",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "SHALL return `{:ok, money}` or `{:error, reason}` with `reason` one of",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 9,
+      "section": "Requirement: Money is a currency-carrying value type, never a bare number",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "SHALL NOT"
+      ],
+      "text": "float amount and a `nil` amount SHALL both be refused, and `nil` SHALL NOT be",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 10,
+      "section": "Requirement: Money is a currency-carrying value type, never a bare number",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "treated as zero. `new!/2` SHALL raise on the same conditions `new/2` refuses.",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 25,
+      "section": "Requirement: Arithmetic never converts across currencies",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "The system SHALL provide `add/2`, `sub/2`, `sum/2`, `compare/2` over",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 28,
+      "section": "Requirement: Arithmetic never converts across currencies",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "codes. No function in `MobusMoney.Money` SHALL accept an exchange rate or",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 39,
+      "section": "Requirement: The FX exchange-rate service is disabled by construction",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "The system SHALL configure `ex_money`'s `auto_start_exchange_rate_service` to",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 51,
+      "section": "Requirement: Rounding follows the currency's minor-unit exponent, with an explicit house default",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "The system SHALL expose `MobusMoney.Currency.exponent/1` returning the",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 56,
+      "section": "Requirement: Rounding follows the currency's minor-unit exponent, with an explicit house default",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "`MobusMoney.Money.round/2` SHALL accept an explicit rounding mode, defaulting",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 72,
+      "section": "Requirement: An optional two-column storage-pair convention, guarded when Ecto is absent",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "The system SHALL provide `MobusMoney.Schema.money_fields/1`, declaring an",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 74,
+      "section": "Requirement: An optional two-column storage-pair convention, guarded when Ecto is absent",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "pair on an Ecto schema; `validate_money/2` SHALL reject a changeset where",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 77,
+      "section": "Requirement: An optional two-column storage-pair convention, guarded when Ecto is absent",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "`read_money/2` SHALL return `nil` for a null/null pair and a",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 78,
+      "section": "Requirement: An optional two-column storage-pair convention, guarded when Ecto is absent",
+      "kind": "requirement",
+      "kinds": [
+        "requirement"
+      ],
+      "matches": [],
+      "text": "`MobusMoney.Money` otherwise. `Ecto` SHALL be an optional dependency; the",
+      "has_rationale": false
+    },
+    {
+      "file": "openspec/changes/money-value-type/specs/money/spec.md",
+      "line": 79,
+      "section": "Requirement: An optional two-column storage-pair convention, guarded when Ecto is absent",
+      "kind": "prohibition",
+      "kinds": [
+        "prohibition"
+      ],
+      "matches": [
+        "SHALL NOT"
+      ],
+      "text": "`MobusMoney.Schema` module SHALL NOT require Ecto to be present for the rest",
+      "has_rationale": false
+    }
+  ],
+  "total": 29,
+  "by_kind": {
+    "prohibition": 17,
+    "requirement": 12
+  },
+  "without_rationale": 25
+}

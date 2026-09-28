@@ -1,0 +1,16 @@
+{
+  "base": "master",
+  "base_sha": "8182fa9df26ee971699553ef5ec5bb2ce0160831",
+  "head": "HEAD",
+  "head_sha": "4ac2a90dffbe9a8991de73c1d0e09082b2451e10",
+  "include_worktree": false,
+  "immutable_paths": [
+    "priv/repo/migrations/**",
+    "priv/repo/tenant_migrations/**"
+  ],
+  "violations": [],
+  "excepted": [],
+  "violation_count": 0,
+  "verdict": "PASS",
+  "checked_at": "2026-09-28T07:16:03.165254+00:00"
+}

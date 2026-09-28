@@ -2,15 +2,21 @@
 #
 # Consumed by: ~/.config/gc/tools/openspec-audit/bin/openspec-audit
 #
-# Scaffold only: the per-change keys (scoped_modules, forward_section_headers,
-# exclude_markers, ...) are authored with each change-set, after exact-text
-# verification. Nothing here suppresses a claim; a key that does is added only
-# for a provably non-claim span, never to manufacture a pass.
+# Current change: money-value-type (Bee GC-5588). scoped_modules below
+# resolve to the NEW modules this change adds (none pre-exist).
 
 # AST index for module/function resolution. This project's server is NOT yet
 # registered with gc_daemon, so the audit degrades to path-convention grep
 # (lower fidelity) until it is.
 mcp_server: elixir-context-mobus_money
+
+# openspec-land's merge test runs in a fresh `git worktree` off master's tip
+# (a linked worktree, its own deps/_build, nothing shared with this worktree
+# or the main checkout). This is the first change-set to add real runtime
+# deps (ex_money/ecto/ex_doc), so the trial worktree needs them fetched
+# before `merge_test_cmd` compiles. (stage8_merge trial: TEST_FAILED, "the
+# dependency is not available, run mix deps.get", 2026-09-28.)
+merge_setup_cmd: mix deps.get
 
 ground_truth_sources:
   change_set:
@@ -18,3 +24,43 @@ ground_truth_sources:
     - openspec/changes/{change_name}/design.md
     - openspec/changes/{change_name}/tasks.md
     - "openspec/changes/{change_name}/specs/**/*.md"
+
+scoped_modules:
+  MobusMoney: MobusMoney
+  MobusMoney.Money: MobusMoney.Money
+  MobusMoney.Currency: MobusMoney.Currency
+  MobusMoney.Schema: MobusMoney.Schema
+
+# R8 section-aware forward classification. Setting this key REPLACES the
+# tool's built-in default list (verified: verifier.py does config.get(key,
+# DEFAULT), no merge), so the full default set is repeated here, plus one
+# addition: numbered Decision headings (`### D1. Title`, this repo's
+# AGENTS.md-mandated convention — the period, not an em-dash, is what this
+# pattern matches). This is this library's FIRST change-set: every module it
+# names (MobusMoney.Money/.Currency/.Schema) is new code described inside a
+# `### D<n>. ` heading, so without this addition every decision's own
+# function/file citations ghost on Stage 0b before task 1 has run a single
+# line of implementation.
+forward_section_headers:
+  - "New code"
+  - "Impact"
+  - "New files?"
+  - "Files to create"
+  - "Implementation"
+  - "To be implemented"
+  - "Forward[- ]looking"
+  - "What Changes"
+  - "Goals?"
+  - "Requirement"
+  - "^D\\d+\\."
+  - "^Consumers"
+  - "\\(D\\d+"
+
+# File-path claims this change cites that live outside this repo. The tool's
+# own built-in rule already classifies any "~/Sites/..." file_path claim as
+# UNVERIFIABLE (not a ghost) — verified by reading verifier.py's
+# _check_external_ref/_verify_file_path before adding this key, so it is not
+# needed for the consumer citations in design.md's Ground-truth section
+# (those are absolute ~/Sites/... paths already). Left empty: nothing here
+# is a provably-non-claim span requiring suppression.
+accept_external_refs: {}

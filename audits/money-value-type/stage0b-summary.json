@@ -1,0 +1,18 @@
+{
+  "aggregated_at": "2026-09-28T07:16:03.165590+00:00",
+  "git_sha": "4ac2a90dffbe9a8991de73c1d0e09082b2451e10",
+  "git_branch": "gc/5588-mobus-money-v0.1",
+  "base_ref": "master",
+  "base_sha": "8182fa9df26ee971699553ef5ec5bb2ce0160831",
+  "immutable_verdict": "PASS",
+  "immutable_violation_count": 0,
+  "ghost_count": 0,
+  "confirmed_count": 3,
+  "unverifiable_count": 6,
+  "forward_declaration_count": 18,
+  "cross_doc_drift_count": 0,
+  "historical_reference_count": 1,
+  "external_path_count": 0,
+  "ghosts": [],
+  "verdict": "PASS"
+}
