@@ -152,9 +152,9 @@
 
 ## 6. Verification
 
-- [ ] 6.1 `mix compile --warnings-as-errors` clean, with and without the
+- [x] 6.1 `mix compile --warnings-as-errors` clean, with and without the
       optional Ecto dependency present (two compile runs).
-- [ ] 6.2 Full suite green.
+- [x] 6.2 Full suite green.
 - [ ] 6.3 `openspec-audit` (Stage 0b) ghost_count 0.
 - [ ] 6.4 `README.md` updated: scaffold-only language removed, public API
       summarized, "Status: scaffold only" replaced with the published
