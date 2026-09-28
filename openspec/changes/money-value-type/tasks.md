@@ -31,7 +31,7 @@
       currency.digits`; `all_codes/0` via
       `Money.Currency.known_tender_currencies/0`; `default_rounding_mode/0`
       (returns `:half_up`, this library's own, no delegation).
-- [ ] 2.2 Falsifying test: `default_rounding_mode/0` returning `ex_money`'s
+- [x] 2.2 Falsifying test: `default_rounding_mode/0` returning `ex_money`'s
       native `:half_even` is shown red first (temporarily hardcode
       `:half_even`, watch the assertion fail, revert) — proves the test
       actually checks the override, not merely that a mode is returned.

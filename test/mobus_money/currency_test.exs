@@ -50,4 +50,20 @@ defmodule MobusMoney.CurrencyTest do
       assert Enum.all?(codes, &is_atom/1)
     end
   end
+
+  describe "default_rounding_mode/0" do
+    test "returns the house :half_up, not ex_money's native :half_even" do
+      assert Currency.default_rounding_mode() == :half_up
+
+      # Proves the assertion checks the OVERRIDE, not merely that some mode
+      # comes back: it must differ from ex_money's own native default
+      # (Money.round/2's @default_rounding_mode is :half_even).
+      assert Currency.default_rounding_mode() != :half_even
+
+      assert Money.round(Money.new(:JPY, "100.5"),
+               rounding_mode: Currency.default_rounding_mode()
+             ) ==
+               Money.new(:JPY, "101")
+    end
+  end
 end
