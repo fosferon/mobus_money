@@ -41,7 +41,17 @@ the epic's (GC-5586) narrative summary of them.
   dependency needs OTP 27+ (fails on `:json` under OTP 26); it auto-starts an
   exchange-rate service unless `auto_start_exchange_rate_service: false`; the
   `ex_cldr`-based localize dependency adds roughly 7MB and ~19s to a first
-  compile.
+  compile. **Correction (PE-6, MINOR, pre-execution audit):** the probe's
+  OTP-27+ claim is contradicted by `ex_money` 6.2.1's own package
+  definition (its deps list, around line 125), which
+  adds `{:json_polyfill, "~> 0.2 or ~> 1.0"}` behind a
+  `Code.ensure_loaded?(:json)` guard specifically to carry an OTP-26 path.
+  Not blocking for this repo (already OTP 28) — but the Consumers section's
+  claim that GC-5587 (MOBuS's OTP bump) gates its adoption of this library
+  needs its own re-verification against the polyfill path before that
+  premise is relied on elsewhere; not re-verified here (out of this change's
+  scope — this library ships regardless of what MOBuS's actual floor turns
+  out to be).
 - This repo's own `.tool-versions`: `erlang 28.4.2`, `elixir
   1.19.5-otp-28` — satisfies `ex_money`'s OTP 27+ floor with no bump needed
   here.
@@ -93,30 +103,72 @@ D7).
 
 ### D1. The value type is a thin wrapper over `ex_money`'s `Money.t()`, not a fresh struct
 
+**Corrected during doc review/pre-execution audit (PE-1, PE-2, PE-5, BLOCKER
+— the round-1 text of this decision named upstream functions that do not
+exist, verified against the actual `ex_money` 6.2.1 source at
+`~/.hex/packages/hexpm/ex_money-6.2.1.tar`, not against the 2026-09-26 probe
+notes, which were themselves wrong on these points.)**
+
 `MobusMoney.Money` wraps `Money.t()` directly rather than re-deriving a struct
 holding a Decimal and a currency code. `ex_money` already has every property
 the 2026-09-06 ruling asks for (currency travels with the amount, no float,
 `nil` is refused not zeroed, mixed-currency ops error). Re-deriving a struct
 here would duplicate `ex_money`'s own correctness work for no gain the ruling
-asks for. What this layer adds: an error-tuple API where `ex_money` raises
-(`Money.new/2` returns `{:ok, money}` or `{:error, reason}` already for most
-inputs, but `Money.new!/2`-style call sites and a few edge functions in
-`ex_money` raise `ArgumentError`/`Money.InvalidAmountError` — this layer
-normalizes every entry point to a tuple, converting a caught exception's
-message into one of this library's own reason atoms:
-`:float_amount`, `:nil_amount`, `:unparseable_amount`, `:unknown_currency`,
-`:currency_mismatch` (carrying both codes)), plus the two things `ex_money`
-does not opinionate on: a house default rounding mode (D3) and the optional
-storage-pair convention (D5).
+asks for.
 
-Public surface, each function used by at least one of the three named
-consumers' documented needs (no function ships speculatively): `new/2`,
-`new!/2`, `zero/1`, `add/2`, `sub/2`, `sum/2` (over a list, one stated
-currency), `mult/2` (by a Decimal or integer), `compare/2`, `compare!/2` (for
-call sites where a currency mismatch is unreachable by construction — none in
-this library itself; documented for a consumer's own envelope-style use),
-`round/2` (explicit mode, default from `MobusMoney.Currency.default_rounding_mode/0`),
-`negative?/1`, `zero?/1`, `format/1`, `to_minor_units/1`, `from_minor_units/2`.
+Public surface, each function's REAL upstream binding verified by direct
+source read (`ex_money-6.2.1/lib/money.ex`,
+`ex_money-6.2.1/lib/money/currency.ex`), each used by at least one of the
+three named consumers' documented needs:
+
+- `new/2(amount, currency_code)` / `new!/2` — this library's own function
+  heads pattern-match `nil` and `is_float(amount)` FIRST and return
+  `{:error, :nil_amount}` / `{:error, :float_amount}` directly, without
+  calling `ex_money` at all for those two cases (sidesteps depending on
+  `ex_money`'s exact exception text for a contract this library owns).
+  Every other input delegates to `Money.new(currency_code, amount)`
+  (`lib/money.ex:199`), translating `{:error, {Money.UnknownCurrencyError,
+  _}}` to `{:error, :unknown_currency}` and any other `{:error, _}` ex_money
+  returns to `{:error, :unparseable_amount}`. `new!/2` raises
+  `MobusMoney.InvalidMoneyError` on any of the four reasons (PL-1: the spec
+  requires `new!/2` to raise, not to return a tuple — task 3.1's original
+  wording said "normalizes every raise path to `{:error, reason}`" without
+  distinguishing `new/2` from `new!/2`; fixed in tasks.md).
+- `zero/1(currency_code)` → `Money.zero/1` (`lib/money.ex:3005`, real).
+- `add/2`, `sub/2` → `Money.add/2` / `Money.sub/2` (`lib/money.ex:1088,1161`,
+  real, confirmed mismatch-error-tuple contract).
+- `sum/2(money_list)` → **NOT** `Money.sum/2` (PE-5, BLOCKER: `Money.sum/2`'s
+  second argument is exchange RATES, defaulting to
+  `latest_rates_or_empty_map()`, and it converts each element via
+  `to_currency/3` — an FX-converting function, exactly what this library
+  must never expose). This library's own `sum/2` is self-reducing:
+  `Enum.reduce(money_list, fn m, acc -> with {:ok, acc} <- add(acc, m), do: acc end)`
+  over its OWN `add/2` (which errors on mismatch), never calling
+  `Money.sum/2`.
+- `mult/2(money, number)` → `Money.mult/2` (`lib/money.ex:1239`, real,
+  accepts integer/float/Decimal — this library's own `mult/2` refuses a
+  float multiplier the same way `new/2` refuses a float amount, for the same
+  no-float posture).
+- `compare/2`, `compare!/2` → `Money.compare/2` / `Money.compare!/2`
+  (`lib/money.ex:1967,2011`, real).
+- `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
+  (`lib/money.ex:2332` — **real signature is a keyword list, not a bare
+  positional mode**, `:rounding_mode` key, verified from the function's own
+  `@doc`/examples). `mode` defaults to
+  `MobusMoney.Currency.default_rounding_mode/0` (D3).
+- `negative?/1`, `zero?/1` → `Money.negative?/1` / `Money.zero?/1`
+  (`lib/money.ex:3160,3045`, real).
+- `format/1(money)` → `Money.to_string/1` (`lib/money.ex:831` — this
+  library's own name; `ex_money` has no function literally named `format`).
+- `to_integer_exp/1(money)` and `from_integer/2(integer, currency_code)` —
+  this library's own names for `ex_money`'s real minor-unit conversion pair,
+  **not** `to_minor_units/1`/`from_minor_units/2` as the round-1 text
+  invented (PE-2, BLOCKER: `grep -rn "minor" lib/` over the real package
+  returns zero matches; no such API exists). `Money.to_integer_exp/2`
+  (`lib/money.ex:2825`) returns `{currency_code, integer, exponent,
+  remainder_money}` — this library's `to_integer_exp/1` delegates directly
+  (fixed options); `Money.from_integer/2` (`lib/money.ex:2912`) is the
+  reverse, delegated directly.
 
 Alternative rejected: port a fresh struct from scratch (the superseded
 Atrapos `house-money-representation` D1). Correct at the time it was written,
@@ -130,13 +182,28 @@ normalization and the house rounding default independently — exactly the
 
 ### D2. The currency registry is `ex_money`'s full ISO 4217 set, uncurated
 
-`MobusMoney.Currency` is a facade over `Money.Currency`: `valid?/1`,
-`exponent/1`, `all_codes/0`, `default_rounding_mode/0` (D3). No consumer
-needs a restricted currency list today (Atrapos's superseded design curated
-five; that curation existed only because a from-scratch struct made every
-extra currency a line of hand-maintained data — `ex_money` already carries
-correct data for the full set, so curating loses correctness for no
-implementation cost saved).
+**Corrected during pre-execution audit (PE-1, BLOCKER — `Money.Currency` has
+no `valid?/1`, `exponent/1`, or `all_codes/0`; verified real surface below.)**
+
+`MobusMoney.Currency` is a facade over `Money.Currency.currency_for_code/1`
+(`ex_money-6.2.1/lib/money/currency.ex:344`, the only lookup function that
+exists): `valid?(code)` is
+`match?({:ok, _}, Money.Currency.currency_for_code(code))`; `exponent(code)`
+pattern-matches `{:ok, currency}` and reads `currency.iso_digits` (falling
+back to `currency.digits` when `iso_digits` is `nil` — the
+`%Localize.Currency{}` struct, `~/.hex/packages/hexpm/localize-1.3.0.tar`
+`lib/localize/currency.ex:32-54`, carries both; `iso_digits` is the ISO 4217
+figure this library wants, `digits` is CLDR's, and they diverge for a few
+currencies such as IQD per `ex_money`'s own `from_integer/2` docs);
+`all_codes/0` is `Money.Currency.known_tender_currencies/0`
+(`lib/money/currency.ex:267`, the real enumeration function — there is no
+function named `all_codes` anywhere in `ex_money`). Plus
+`default_rounding_mode/0` (D3, this library's own, no upstream equivalent).
+No consumer needs a restricted currency list today (Atrapos's superseded
+design curated five; that curation existed only because a from-scratch
+struct made every extra currency a line of hand-maintained data — `ex_money`
+already carries correct data for the full set, so curating loses correctness
+for no implementation cost saved).
 
 Alternative rejected: keep Atrapos's five-currency curated list as this
 library's default. A consumer that needs to restrict which currencies its
@@ -259,8 +326,23 @@ library's own `sub/2` can produce a negative result) reach a persisted
 budget/cost column undetected, where it would misrepresent a magnitude as a
 debt with no consumer expecting that meaning.
 
-`MobusMoney.Schema.read_money/2` returns one
-`MobusMoney.Money` from the pair, or `nil` for null/null. Ecto is declared
+**Corrected during pre-execution audit (PE-3, MAJOR — a half-set pair is
+reachable outside `validate_money/2`'s reach: raw `psql`, a migration
+backfill, or a hand-written test fixture, none of which run a changeset.
+`read_money/2`'s original two-branch contract had no case for it, so an
+implementer's only options were an undefined crash via `new!/2` or a silent,
+wrong `{:error, :unknown_currency}` from `new/2` — neither matches the
+SHALL.)** `MobusMoney.Schema.read_money/2` returns `{:ok, nil}` for a
+null/null pair, `{:ok, money}` for a valid pair, and `{:error,
+:half_set_pair}` — naming which of the two columns is missing in the error's
+context, not raising — for a pair where exactly one column is set. A
+consumer that has run `validate_money/2` on every write path never observes
+the third case in practice; the function's contract still names it, because
+this library does not control every path that can reach its own columns
+(raw SQL, a migration, a fixture) and a named error is strictly better than
+an unreachable-in-theory crash.
+
+Ecto is declared
 `optional: true` in `mix.exs`: a consumer that only needs the value type and
 arithmetic (no persistence) does not need Ecto pulled in transitively, and
 `MobusMoney.Schema` is not compiled unless Ecto is present (guarded via
@@ -291,12 +373,14 @@ consumer's ability to index or `GROUP BY` currency in a spend query.
 
 `MobusMoney.Money.round/2` takes its mode as an explicit argument (defaulting
 to D3's constant); no function reads a consumer's application environment for
-per-call behavior. The one process-wide `Application.put_env` this library
-performs (D4, disabling the FX service) is infrastructure-off, not a
-business-behavior switch. A library with several unrelated consumer
-applications potentially running in the same BEAM release (unlikely today,
-but this library must not assume otherwise) must not let one consumer's
-config silently change another's rounding.
+per-call behavior. **Corrected during pre-execution audit (PE-4/PL-3, MAJOR
+— this sentence originally claimed a library-side `Application.put_env` that
+D4's own fold already removed; this library performs no `put_env` anywhere.
+D4's `ensure_fx_disabled!/0` READS a consumer's own config, it never writes
+any config.** A library with several unrelated consumer applications
+potentially running in the same BEAM release (unlikely today, but this
+library must not assume otherwise) must not let one consumer's config
+silently change another's rounding.
 
 Alternative rejected: a `Application.get_env(:mobus_money, :rounding_mode)`
 override point. Convenient for a single-app consumer, wrong for a library;
@@ -403,8 +487,11 @@ un-shipped.
   case); mixed-currency add/sub/sum/compare return the mismatch error
   carrying both codes and never a converted value; rounding by minor-unit
   exponent for JPY vs EUR at both the half-up default and an explicit
-  half-even override; `to_minor_units`/`from_minor_units` exact or refused;
-  `format/1` output for at least one 0-decimal and one 2-decimal currency.
+  half-even override; `to_integer_exp/1`/`from_integer/2` round-trip exact
+  for a JPY and a EUR amount; `format/1` output for at least one 0-decimal
+  and one 2-decimal currency; `sum/2` reduces over this module's own `add/2`
+  and errors on a mixed-currency list the same way `add/2` does (never
+  delegates to `Money.sum/2`, PE-5).
 - Currency registry: `valid?/1` true for the full ISO 4217 set `ex_money`
   carries, false for a non-code string; `exponent/1` matches `ex_money`'s own
   data for a sample spanning 0, 2, and 3-decimal currencies;
@@ -413,8 +500,11 @@ un-shipped.
 - Schema helper (conditionally compiled, tested only when Ecto is present in
   the test env's deps): `money_fields/1` defines both columns;
   `validate_money/2` rejects a half-set pair, an unknown currency, and a
-  negative amount; `read_money/2` returns `nil` for null/null and a
-  `MobusMoney.Money` otherwise; a guard test asserts `MobusMoney.Schema` does
+  negative amount; `read_money/2` returns `{:ok, nil}` for null/null,
+  `{:ok, money}` for a valid pair, and `{:error, :half_set_pair}` for a
+  pair with exactly one column set (constructed directly on a struct,
+  bypassing `validate_money/2`, to prove the reader itself refuses rather
+  than crashing); a guard test asserts `MobusMoney.Schema` does
   not raise at compile time when Ecto is absent (simulated via
   `Code.ensure_loaded?/1` stub, not by actually removing the test-env
   dependency).

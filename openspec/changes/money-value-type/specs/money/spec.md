@@ -90,12 +90,14 @@ The system SHALL provide `MobusMoney.Schema.money_fields/1`, declaring an
 pair on an Ecto schema; `validate_money/2` SHALL reject a changeset where
 exactly one of the pair is set, where the currency is not a valid code per
 `MobusMoney.Currency.valid?/1`, or where the amount is negative.
-`read_money/2` SHALL return `nil` for a null/null pair and a
-`MobusMoney.Money` otherwise. `Ecto` SHALL be an optional dependency; the
+`read_money/2` SHALL return `{:ok, nil}` for a null/null pair, `{:ok, money}`
+for a valid pair, and `{:error, :half_set_pair}` — never raise — for a pair
+reachable outside `validate_money/2` (raw SQL, a migration, a fixture) where
+exactly one column is set. `Ecto` SHALL be an optional dependency; the
 `MobusMoney.Schema` module SHALL NOT require Ecto to be present for the rest
 of this library to compile.
 
-#### Scenario: A half-set pair is rejected
+#### Scenario: A half-set pair is rejected at the changeset boundary
 
 - **WHEN** a changeset sets `<name>_amount` but leaves `<name>_currency` nil
 - **THEN** `validate_money/2` adds an error and the changeset is invalid
@@ -103,4 +105,29 @@ of this library to compile.
 #### Scenario: A null/null pair reads as nil, not as zero
 
 - **WHEN** `read_money/2` is called on a schema struct whose pair is both nil
-- **THEN** it returns `nil`
+- **THEN** it returns `{:ok, nil}`
+
+#### Scenario: A half-set pair reaching the reader directly errors, never crashes
+
+- **WHEN** `read_money/2` is called on a schema struct constructed with
+  exactly one of the pair set, bypassing `validate_money/2`
+- **THEN** it returns `{:error, :half_set_pair}` rather than raising
+
+### Requirement: The remaining arithmetic and utility surface stays no-float, no-FX
+
+The system SHALL provide `mult/2` (refusing a float multiplier the same way
+`new/2` refuses a float amount), `compare!/2`, `zero/1`, `negative?/1`,
+`zero?/1`, `format/1`, `to_integer_exp/1`, `from_integer/2`, and
+`MobusMoney.Currency.all_codes/0` on `MobusMoney.Money` /
+`MobusMoney.Currency`. No function in this set SHALL accept an exchange rate
+or a float where an amount or multiplier is expected. (PE-9/F1.5, doc review
+— these functions were named in design.md's public surface and tasks.md but
+covered by no requirement here, the archive-surviving surface; this
+requirement closes that gap rather than leaving their contracts to
+disappear at archive.)
+
+#### Scenario: A float multiplier is refused
+
+- **WHEN** `mult/2` is called with a float multiplier
+- **THEN** it returns `{:error, :float_amount}`, the same reason `new/2`
+  uses for a float amount
