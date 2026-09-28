@@ -179,8 +179,16 @@ defmodule MobusMoney.MoneyTest do
     end
 
     test "from_integer/2 reads the per-currency exponent from the registry" do
-      assert MobusMoney.Money.from_integer(20000, :USD) == Money.new(:USD, "200.00")
-      assert MobusMoney.Money.from_integer(20012, :IQD) == Money.new(:IQD, "20.012")
+      assert {:ok, usd} = MobusMoney.Money.from_integer(20000, :USD)
+      assert usd == Money.new(:USD, "200.00")
+      assert {:ok, iqd} = MobusMoney.Money.from_integer(20012, :IQD)
+      assert iqd == Money.new(:IQD, "20.012")
+    end
+
+    test "from_integer/2 normalizes an unknown currency to this library's reason atom" do
+      # pre-fix, the direct delegation leaked ex_money's raw
+      # {:error, {Money.UnknownCurrencyError, _}} tuple across the boundary
+      assert MobusMoney.Money.from_integer(5, :NOPE) == {:error, :unknown_currency}
     end
   end
 
@@ -257,12 +265,14 @@ defmodule MobusMoney.MoneyTest do
       {:EUR, minor, -2, _remainder} = MobusMoney.Money.to_integer_exp(eur)
       # half_up on the third decimal: 123.456 -> 123.46 -> 12346 minor units
       assert minor == 12346
-      assert MobusMoney.Money.from_integer(minor, :EUR) == Money.new(:EUR, "123.46")
+      assert {:ok, eur_back} = MobusMoney.Money.from_integer(minor, :EUR)
+      assert eur_back == Money.new(:EUR, "123.46")
 
       jpy = Money.new(:JPY, "100.5")
       {:JPY, jpy_minor, 0, _} = MobusMoney.Money.to_integer_exp(jpy)
       assert jpy_minor == 101
-      assert MobusMoney.Money.from_integer(jpy_minor, :JPY) == Money.new(:JPY, "101")
+      assert {:ok, jpy_back} = MobusMoney.Money.from_integer(jpy_minor, :JPY)
+      assert jpy_back == Money.new(:JPY, "101")
     end
   end
 end

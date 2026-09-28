@@ -168,7 +168,9 @@ defmodule MobusMoney.Money do
   A float multiplier returns `{:error, :float_amount}` — the same no-float
   posture as `new/2`. Note the guard is entirely this library's own:
   `Money.mult/2` itself accepts floats (`Decimal.from_float/1`), so nothing
-  upstream enforces it.
+  upstream enforces it. A non-numeric multiplier is outside this
+  function's spec'd domain and surfaces ex_money's own
+  `{:error, {ArgumentError, _}}` from the delegation.
   """
   @spec mult(t(), integer() | Decimal.t()) :: {:ok, t()} | {:error, :float_amount}
   def mult(%Money{} = _money, number) when is_float(number), do: {:error, :float_amount}
@@ -208,6 +210,7 @@ defmodule MobusMoney.Money do
       iex> MobusMoney.Money.round(m, :half_even)
       Money.new(:JPY, "100")
   """
+  @spec round(t()) :: t()
   @spec round(t(), Money.rounding_mode()) :: t()
   def round(%Money{} = money, mode \\ MobusMoney.Currency.default_rounding_mode()) do
     Money.round(money, rounding_mode: mode)
@@ -246,7 +249,19 @@ defmodule MobusMoney.Money do
   minor-unit pair with `to_integer_exp/1`), delegated directly — ex_money
   reads the correct per-currency exponent from its registry (IQD is
   3-digit: `Money.from_integer(20012, :IQD)` is `20.012` IQD).
+
+  The one exception to the bare delegation is the error path: an unknown
+  `currency_code` is normalized to `{:error, :unknown_currency}` (the same
+  reason atom `new/2`/`zero/1` return) so ex_money's raw
+  `{:error, {Money.UnknownCurrencyError, _}}` tuple never escapes this
+  library's boundary.
   """
-  @spec from_integer(integer(), Money.Currency.code()) :: t()
-  def from_integer(amount, currency_code), do: Money.from_integer(amount, currency_code)
+  @spec from_integer(integer(), Money.Currency.code()) ::
+          {:ok, t()} | {:error, :unknown_currency}
+  def from_integer(amount, currency_code) do
+    case Money.from_integer(amount, currency_code) do
+      %Money{} = money -> {:ok, money}
+      {:error, _} -> {:error, :unknown_currency}
+    end
+  end
 end
