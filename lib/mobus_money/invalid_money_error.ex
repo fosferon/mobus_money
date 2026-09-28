@@ -9,7 +9,12 @@ defmodule MobusMoney.InvalidMoneyError do
 
   @type t :: %__MODULE__{reason: MobusMoney.Money.error_reason()}
 
+  @doc """
+  Renders a reason-specific message naming what was wrong with the amount
+  or currency, not just the bare reason atom.
+  """
   @impl true
+  @spec message(t()) :: String.t()
   def message(%__MODULE__{reason: reason}) do
     detail =
       case reason do
