@@ -116,8 +116,9 @@ SHALL reject a changeset where exactly one of the pair is set, where the
 currency is not a valid code per `MobusMoney.Currency.valid?/1`, or where
 the amount is negative. `read_money/2` (whose second argument SHALL also be
 that `name` atom) SHALL return `{:ok, nil}` for a null/null pair, `{:ok,
-money}` for a valid pair, and `{:error, :half_set_pair}` — never raise —
-for a pair reachable outside `validate_money/2` (raw SQL, a migration, a
+money}` for a valid pair, and `{:error, {:half_set_pair, missing_field}}` —
+`missing_field` naming which of `:amount`/`:currency` is `nil`, never raise
+— for a pair reachable outside `validate_money/2` (raw SQL, a migration, a
 fixture) where exactly one column is set. `Ecto` SHALL be an optional
 dependency; the `MobusMoney.Schema` module SHALL NOT require Ecto to be
 present for the rest of this library to compile.
@@ -138,7 +139,8 @@ present for the rest of this library to compile.
 
 - **WHEN** `read_money(struct, name)` is called on a schema struct
   constructed with exactly one of the pair set, bypassing `validate_money/2`
-- **THEN** it returns `{:error, :half_set_pair}` rather than raising
+- **THEN** it returns `{:error, {:half_set_pair, missing_field}}`, naming
+  the nil column, rather than raising
 
 ### Requirement: The remaining arithmetic and utility surface stays no-float, no-FX
 

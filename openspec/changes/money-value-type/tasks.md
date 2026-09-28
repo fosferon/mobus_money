@@ -103,9 +103,11 @@
       null or both non-null), registry membership via
       `MobusMoney.Currency.valid?/1`, non-negativity.
 - [ ] 4.4 `read_money(struct, name)`: `{:ok, nil}` for null/null, `{:ok,
-      money}` for a valid pair, `{:error, :half_set_pair}` for exactly one
-      column set (PE-3-prior — reachable outside `validate_money/2`, e.g.
-      raw SQL; must not crash).
+      money}` for a valid pair, `{:error, {:half_set_pair, missing_field}}`
+      (PL-1, round-3 librarian — the atom alone dropped the
+      which-column-is-missing diagnostic design.md itself claims; fixed to
+      name `:amount` or `:currency`) for exactly one column set (PE-3-prior
+      — reachable outside `validate_money/2`, e.g. raw SQL; must not crash).
 - [ ] 4.5 Falsifying tests: half-set pair rejected, unknown currency
       rejected, negative amount rejected, null/null reads as `{:ok, nil}`.
       **Ecto-absent coverage is task 6.1's two compile runs, not a unit test

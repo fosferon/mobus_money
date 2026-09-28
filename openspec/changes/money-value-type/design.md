@@ -387,8 +387,13 @@ implementer's only options were an undefined crash via `new!/2` or a silent,
 wrong `{:error, :unknown_currency}` from `new/2` — neither matches the
 SHALL.)** `MobusMoney.Schema.read_money/2` returns `{:ok, nil}` for a
 null/null pair, `{:ok, money}` for a valid pair, and `{:error,
-:half_set_pair}` — naming which of the two columns is missing in the error's
-context, not raising — for a pair where exactly one column is set. A
+{:half_set_pair, missing_field}}` — where `missing_field` is `:amount` or
+`:currency`, whichever of the pair is `nil` — not raising, for a pair where
+exactly one column is set (PL-1, round-3 pre-execution librarian: the
+round-3 text asserted the error "names which column is missing" while every
+other site in the change-set pinned the contract as the bare atom
+`:half_set_pair`, which carries no such diagnostic — fixed to actually carry
+it, consistently, everywhere). A
 consumer that has run `validate_money/2` on every write path never observes
 the third case in practice; the function's contract still names it, because
 this library does not control every path that can reach its own columns
@@ -555,7 +560,8 @@ un-shipped.
   `validate_money(changeset, name)` rejects a half-set pair, an unknown
   currency, and a negative amount; `read_money(struct, name)` returns
   `{:ok, nil}` for null/null, `{:ok, money}` for a valid pair, and
-  `{:error, :half_set_pair}` for a pair with exactly one column set
+  `{:error, {:half_set_pair, missing_field}}` for a pair with exactly one
+  column set, asserting `missing_field` matches which column was left nil
   (constructed directly on a struct, bypassing `validate_money/2`, to prove
   the reader itself refuses rather than crashing). **Corrected (PE-4,
   round-3 pre-execution, MINOR): the "Ecto absent" guard cannot be tested by
