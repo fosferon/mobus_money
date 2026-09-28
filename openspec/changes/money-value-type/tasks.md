@@ -142,7 +142,7 @@
 
 ## 5. FX-disabled guard (D4 — corrected mechanism, doc review F1.1)
 
-- [ ] 5.1 `MobusMoney.ensure_fx_disabled!/0`: raises, naming the missing
+- [x] 5.1 `MobusMoney.ensure_fx_disabled!/0`: raises, naming the missing
       setting, unless `Application.get_env(:ex_money,
       :auto_start_exchange_rate_service) == false` in the CALLING
       application's config (not this library's — there is none). Falsifying
