@@ -10,7 +10,7 @@
       a consuming application, so no config file ships here).
 - [x] 1.3 `openspec/specs/money/spec.md` delta authored (this change-set's
       spec deltas, folded on archive).
-- [ ] 1.4 `config/config.exs` (THIS repo's own, distinct from D4's
+- [x] 1.4 `config/config.exs` (THIS repo's own, distinct from D4's
       no-config-for-consumers rule — Mix DOES load config/config.exs for the
       top-level application being compiled, which during `mix test` is this
       library itself): `config :ex_money, auto_start_exchange_rate_service:
