@@ -183,4 +183,86 @@ defmodule MobusMoney.MoneyTest do
       assert MobusMoney.Money.from_integer(20012, :IQD) == Money.new(:IQD, "20.012")
     end
   end
+
+  describe "falsifying battery (task 3.4, per design Testing section)" do
+    test "arithmetic is exact: 0.056 + 0.044 == exactly 0.100, no float intermediate" do
+      assert MobusMoney.Money.add(Money.new(:EUR, "0.056"), Money.new(:EUR, "0.044")) ==
+               {:ok, Money.new(:EUR, "0.100")}
+
+      assert MobusMoney.Money.sum([Money.new(:EUR, "0.056"), Money.new(:EUR, "0.044")], :EUR) ==
+               {:ok, Money.new(:EUR, "0.100")}
+    end
+
+    test "mixed-currency error is this library's structured tuple, not upstream prose" do
+      error = MobusMoney.Money.add(Money.new(:EUR, 1), Money.new(:USD, 1))
+
+      assert error == {:error, {:currency_mismatch, :EUR, :USD}}
+
+      # both codes are atoms (Money.t()'s own :currency field type), not a
+      # string carrying the codes in prose
+      assert {:error, {tag, a, b}} = error
+      assert tag == :currency_mismatch and is_atom(a) and is_atom(b)
+    end
+
+    test "sum/2 on an empty list returns zero in the stated currency, not a crash" do
+      assert MobusMoney.Money.sum([], :EUR) == {:ok, Money.new(:EUR, 0)}
+    end
+
+    test "sum/2 on a 2-item mismatched list halts with the structured error" do
+      assert MobusMoney.Money.sum([Money.new(:EUR, 1), Money.new(:USD, 1)], :EUR) ==
+               {:error, {:currency_mismatch, :EUR, :USD}}
+    end
+
+    test "sum/2 on a 3+-item list with the mismatch in the MIDDLE halts immediately" do
+      # The round-2 defect: an unseeded reduce feeds {:error, _} back into
+      # add/2 as if it were a %Money{} (FunctionClauseError) for exactly
+      # this list shape
+      assert MobusMoney.Money.sum(
+               [Money.new(:EUR, "1.00"), Money.new(:USD, "1.00"), Money.new(:EUR, "2.00")],
+               :EUR
+             ) ==
+               {:error, {:currency_mismatch, :EUR, :USD}}
+    end
+
+    test "sum/2 with an unknown stated currency errors before touching the list" do
+      # A non-money element would crash the fold if it were ever evaluated;
+      # the seed is validated first, so the list is never touched
+      assert MobusMoney.Money.sum([:boom], :NOPE) == {:error, :unknown_currency}
+      assert MobusMoney.Money.sum([], :NOPE) == {:error, :unknown_currency}
+    end
+
+    test "mult/2 with a float multiplier returns :float_amount" do
+      # Load-bearing: Money.mult/2 ACCEPTS floats upstream, so nothing but
+      # this library's own guard enforces the no-float posture (round-4 PE-2)
+      assert MobusMoney.Money.mult(Money.new(:EUR, "1.25"), 1.5) == {:error, :float_amount}
+      assert MobusMoney.Money.mult(Money.new(:EUR, "1.25"), 0.0) == {:error, :float_amount}
+    end
+
+    test "JPY (0-decimal) and EUR (2-decimal) round at both modes" do
+      assert MobusMoney.Money.round(Money.new(:JPY, "100.5"), :half_up) ==
+               Money.new(:JPY, "101")
+
+      assert MobusMoney.Money.round(Money.new(:JPY, "100.5"), :half_even) ==
+               Money.new(:JPY, "100")
+
+      assert MobusMoney.Money.round(Money.new(:EUR, "1.005"), :half_up) ==
+               Money.new(:EUR, "1.01")
+
+      assert MobusMoney.Money.round(Money.new(:EUR, "1.005"), :half_even) ==
+               Money.new(:EUR, "1.00")
+    end
+
+    test "to_integer_exp/from_integer round-trip with the house rounding mode" do
+      eur = Money.new(:EUR, "123.456")
+      {:EUR, minor, -2, _remainder} = MobusMoney.Money.to_integer_exp(eur)
+      # half_up on the third decimal: 123.456 -> 123.46 -> 12346 minor units
+      assert minor == 12346
+      assert MobusMoney.Money.from_integer(minor, :EUR) == Money.new(:EUR, "123.46")
+
+      jpy = Money.new(:JPY, "100.5")
+      {:JPY, jpy_minor, 0, _} = MobusMoney.Money.to_integer_exp(jpy)
+      assert jpy_minor == 101
+      assert MobusMoney.Money.from_integer(jpy_minor, :JPY) == Money.new(:JPY, "101")
+    end
+  end
 end

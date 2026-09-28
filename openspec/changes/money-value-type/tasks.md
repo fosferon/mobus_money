@@ -97,7 +97,7 @@
       → `Money.from_integer/2` — this library's own names for ex_money's
       real minor-unit pair, NOT `to_minor_units/1`/`from_minor_units/2`
       (PE-2-prior, BLOCKER: that API does not exist in `ex_money`).
-- [ ] 3.4 Falsifying tests per Testing section: float/nil refusal, exact
+- [x] 3.4 Falsifying tests per Testing section: float/nil refusal, exact
       0.056+0.044 arithmetic, mixed-currency error carrying both codes (via
       the currency-check-first path, not an upstream string), `sum/2` on an
       empty list, a 2-item mismatch, a 3+-item list with the mismatch in
