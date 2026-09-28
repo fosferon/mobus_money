@@ -112,7 +112,7 @@
 
 ## 4. Storage-pair schema helper (D5) — optional-Ecto guarded
 
-- [ ] 4.1 `MobusMoney.Schema`: `Code.ensure_loaded?/1` guard so the module
+- [x] 4.1 `MobusMoney.Schema`: `Code.ensure_loaded?/1` guard so the module
       does not require Ecto to compile when absent.
 - [ ] 4.2 `money_fields/1(name)` macro: declares `<name>_amount`
       (`numeric(28,8)`) and `<name>_currency` (`varchar(3)`), `name` the
