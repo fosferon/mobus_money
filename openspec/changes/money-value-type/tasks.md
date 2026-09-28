@@ -48,27 +48,41 @@
       `{:error, :unparseable_amount}`. `new!/2` (PL-1 — the spec requires
       this to RAISE, not return a tuple): raises `MobusMoney.InvalidMoneyError`
       with the reason from `new/2`.
-- [ ] 3.2 `zero/1` → `Money.zero/1`. `add/2`/`sub/2`/`compare/2` (round-3
-      pre-execution PE-1, BLOCKER — `Money.add/2` etc. do NOT return a
-      structured mismatch tuple; they return `{:error, {ArgumentError,
-      "Cannot add monies with different currencies..."}}`): pattern-match
-      both operands' `.currency` FIRST — same currency delegates to the real
-      `Money.*` function (now guaranteed mismatch-free); different
-      currencies return `{:error, {:currency_mismatch, currency_a,
-      currency_b}}` directly, never calling the upstream function.
-      `compare!/2` is NOT shipped (PE-6 — no consumer need, unargued bang
-      asymmetry). `sum/2(money_list, currency)` (PE-2, MAJOR — the round-2
-      pseudocode crashed on `[]` and on a 3+-item mismatch not in the last
-      pair, and dropped the "one stated currency" second argument entirely):
-      `Enum.reduce_while(money_list, {:ok, zero(currency)}, fn m, {:ok,
-      acc} -> case add(acc, m) do {:ok,_}=ok -> {:cont,ok}; {:error,_}=e ->
-      {:halt,e} end end)` — seeded from `zero(currency)` (empty list returns
-      it, no crash), halts immediately on the first mismatch (never re-feeds
-      an error tuple into `add/2`), never calls `Money.sum/2` (its 2nd arg
-      is FX rates and it converts — would silently violate never-converts).
-      `mult/2` → `Money.mult/2`, refusing a float multiplier the same way
-      `new/2` refuses a float amount. `negative?/1`/`zero?/1` →
-      `Money.negative?/1`/`Money.zero?/1`.
+- [ ] 3.2 `zero/1` → `Money.zero/1`, returning `{:ok, money} |
+      {:error, :unknown_currency}` (round-4 PE-1 — `Money.zero/2` validates
+      the currency first and can itself error; not a bare `Money` return).
+      `add/2`/`sub/2`/`compare/2` (round-3 pre-execution PE-1, BLOCKER —
+      `Money.add/2` etc. do NOT return a structured mismatch tuple; they
+      return `{:error, {ArgumentError, "Cannot add monies with different
+      currencies..."}}`): pattern-match both operands' `.currency` FIRST —
+      same currency delegates to the real `Money.*` function (now guaranteed
+      mismatch-free); different currencies return `{:error,
+      {:currency_mismatch, currency_a, currency_b}}` directly, never calling
+      the upstream function. `compare!/2` is NOT shipped (PE-6 — no consumer
+      need, unargued bang asymmetry). `sum/2(money_list, currency)` (PE-2,
+      MAJOR — the round-2 pseudocode crashed on `[]` and on a 3+-item
+      mismatch not in the last pair, and dropped the "one stated currency"
+      second argument entirely; seed handling further fixed round-4 PE-1 —
+      validate the seed via `zero/1` BEFORE folding, since an unknown
+      `currency` argument must return `{:error, :unknown_currency}`
+      immediately rather than poison the accumulator):
+      ```
+      case zero(currency) do
+        {:error, _} = err -> err
+        {:ok, seed} -> Enum.reduce_while(money_list, {:ok, seed}, fn m, {:ok, acc} ->
+          case add(acc, m) do {:ok,_}=ok -> {:cont,ok}; {:error,_}=e -> {:halt,e} end
+        end)
+      end
+      ```
+      halts immediately on the first mismatch (never re-feeds an error tuple
+      into `add/2`), never calls `Money.sum/2` (its 2nd arg is FX rates and
+      it converts — would silently violate never-converts). `mult/2` →
+      `Money.mult/2`, refusing a float multiplier the same way `new/2`
+      refuses a float amount — **`Money.mult/2` itself ACCEPTS floats**
+      (`Decimal.from_float/1`, `lib/money.ex:1243-1245`), so this guard is
+      entirely this library's own, not inherited (round-4 PE-2 — task 3.4's
+      falsifying-test list must actually exercise this, see below).
+      `negative?/1`/`zero?/1` → `Money.negative?/1`/`Money.zero?/1`.
 - [ ] 3.3 `round/2(money, mode)` → `Money.round(money, rounding_mode: mode)`
       (real signature is a KEYWORD LIST, not a bare positional mode — PE-1
       area finding), mode defaults to
@@ -86,10 +100,15 @@
 - [ ] 3.4 Falsifying tests per Testing section: float/nil refusal, exact
       0.056+0.044 arithmetic, mixed-currency error carrying both codes (via
       the currency-check-first path, not an upstream string), `sum/2` on an
-      empty list, a 2-item mismatch, and a 3+-item list with the mismatch in
-      the MIDDLE (the specific crash PE-2 identified), JPY-vs-EUR rounding
-      at both modes, `to_integer_exp/1`/`from_integer/2` round-trip with the
-      house rounding mode applied.
+      empty list, a 2-item mismatch, a 3+-item list with the mismatch in
+      the MIDDLE (the specific crash PE-2-prior identified), `sum/2` with an
+      unknown `currency` argument returning `{:error, :unknown_currency}`
+      without touching the list (round-4 PE-1), **`mult/2` with a float
+      multiplier returning `{:error, :float_amount}`** (round-4 PE-2 — spec
+      R6's own scenario; load-bearing because `Money.mult/2` ACCEPTS floats
+      upstream, so nothing upstream would catch a silently-broken guard),
+      JPY-vs-EUR rounding at both modes, `to_integer_exp/1`/`from_integer/2`
+      round-trip with the house rounding mode applied.
 
 ## 4. Storage-pair schema helper (D5) — optional-Ecto guarded
 
@@ -108,12 +127,18 @@
       which-column-is-missing diagnostic design.md itself claims; fixed to
       name `:amount` or `:currency`) for exactly one column set (PE-3-prior
       — reachable outside `validate_money/2`, e.g. raw SQL; must not crash).
-- [ ] 4.5 Falsifying tests: half-set pair rejected, unknown currency
-      rejected, negative amount rejected, null/null reads as `{:ok, nil}`.
-      **Ecto-absent coverage is task 6.1's two compile runs, not a unit test
-      here** (PE-4, MINOR — `Code.ensure_loaded?/1` is compile-time-resolved
-      stdlib and cannot be stubbed in ExUnit; the round-2 text named an
-      unimplementable test).
+- [ ] 4.5 Falsifying tests: half-set pair rejected (at the `validate_money/2`
+      changeset boundary), unknown currency rejected, negative amount
+      rejected, null/null reads as `{:ok, nil}`, **`read_money/2` called on
+      a struct constructed directly with exactly one column set (bypassing
+      `validate_money/2` entirely) returns `{:error, {:half_set_pair,
+      missing_field}}` rather than crashing** (round-4 PE-2 — spec R5's own
+      scenario; this is the specific regression the PE-3-prior fold exists
+      to prevent, and was missing from this enumeration). **Ecto-absent
+      coverage is task 6.1's two compile runs, not a unit test here** (PE-4,
+      MINOR — `Code.ensure_loaded?/1` is compile-time-resolved stdlib and
+      cannot be stubbed in ExUnit; the round-2 text named an unimplementable
+      test).
 
 ## 5. FX-disabled guard (D4 — corrected mechanism, doc review F1.1)
 

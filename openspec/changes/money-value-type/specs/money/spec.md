@@ -55,6 +55,13 @@ perform a currency conversion.
 - **WHEN** `sum/2` is called with a three-element list whose SECOND element
   is a different currency from the stated one
 - **THEN** it returns `{:error, {:currency_mismatch, code_a, code_b}}`
+
+#### Scenario: An unknown stated currency errors before touching the list
+
+- **WHEN** `sum/2` is called with any list (including an empty one) and a
+  `currency` argument that is not a known currency code
+- **THEN** it returns `{:error, :unknown_currency}` without evaluating any
+  list element
   without evaluating the third element
 
 ### Requirement: A consumer's disabled FX service is asserted at boot, loudly

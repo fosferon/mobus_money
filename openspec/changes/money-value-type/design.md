@@ -135,6 +135,12 @@ three named consumers' documented needs:
   wording said "normalizes every raise path to `{:error, reason}`" without
   distinguishing `new/2` from `new!/2`; fixed in tasks.md).
 - `zero/1(currency_code)` → `Money.zero/1` (`lib/money.ex:3005`, real).
+  `Money.zero/2` validates the currency code first (`lib/money.ex:3011-3015`)
+  and returns `{:error, {Money.UnknownCurrencyError, _}}` for an unknown one
+  — this library's own `zero/1` therefore has the same two-shape contract as
+  `new/2`: `{:ok, money} | {:error, :unknown_currency}`, not a bare `Money`
+  value (round-4 pre-execution PE-1 depends on this being stated explicitly;
+  see `sum/2`'s corrected seed handling below).
 - `add/2`, `sub/2`, `compare/2` — **corrected (PE-1, round-3 pre-execution,
   BLOCKER):** `Money.add/2`/`Money.sub/2`/`Money.compare/2` do NOT return a
   structured mismatch tuple on differing currencies — verified by direct
@@ -153,7 +159,8 @@ three named consumers' documented needs:
   (D1 above): intercept the cases this library owns a contract for BEFORE
   delegating, rather than translate an upstream exception's prose.
 - `sum/2(money_list, currency)` — **corrected (PE-2, round-3
-  pre-execution, MAJOR):** the round-2 pseudocode
+  pre-execution, MAJOR; seed handling further corrected, PE-1, round-4
+  pre-execution, MINOR):** the round-2 pseudocode
   (`Enum.reduce(money_list, fn m, acc -> ... end)`, no seed) crashes on an
   empty list (`Enum.EmptyError`, no seed value) and, for a 3+-element list
   with a mismatch not in the final pair, feeds `{:error, _}` back into
@@ -161,21 +168,34 @@ three named consumers' documented needs:
   originally-intended second argument (proposal/design round 1: "over a
   list, one stated currency") was dropped from the round-2 rewrite and is
   restored here as `sum/2`'s real second parameter — the currency the sum
-  must be denominated in, also the seed:
+  must be denominated in, also the seed. The round-3 fix's seed,
+  `{:ok, zero(currency)}`, assumed `zero/1` always succeeds; since `zero/1`
+  can itself return `{:error, :unknown_currency}` (see above), that assumed
+  wrapping would produce `{:ok, {:error, _}}` for a bad `currency` argument,
+  and the next `add/2` call would then crash on the same non-`%Money{}`
+  accumulator PE-2 already fixed for the general case. Corrected to validate
+  the seed before folding:
   ```
-  Enum.reduce_while(money_list, {:ok, zero(currency)}, fn m, {:ok, acc} ->
-    case add(acc, m) do
-      {:ok, _} = ok -> {:cont, ok}
-      {:error, _} = err -> {:halt, err}
-    end
-  end)
+  case zero(currency) do
+    {:error, _} = err -> err
+    {:ok, seed} ->
+      Enum.reduce_while(money_list, {:ok, seed}, fn m, {:ok, acc} ->
+        case add(acc, m) do
+          {:ok, _} = ok -> {:cont, ok}
+          {:error, _} = err -> {:halt, err}
+        end
+      end)
+  end
   ```
-  An empty list returns `{:ok, zero(currency)}` (no crash, no undefined
-  behavior); a mismatch anywhere in the list halts immediately with this
-  library's own `add/2`'s structured error (never reaches a second `add/2`
-  call with a non-`%Money{}` accumulator). Never calls `Money.sum/2` (still
-  true, and still load-bearing: `Money.sum/2`'s second argument is exchange
-  RATES, defaulting to `latest_rates_or_empty_map()`, and it converts each
+  An unknown `currency` argument now returns `{:error, :unknown_currency}`
+  immediately, matching every other function's treatment of that input
+  class, instead of reaching the fold at all. An empty list (valid currency)
+  returns `{:ok, seed}` (no crash, no undefined behavior); a mismatch
+  anywhere in the list halts immediately with this library's own `add/2`'s
+  structured error (never reaches a second `add/2` call with a non-`%Money{}`
+  accumulator). Never calls `Money.sum/2` (still true, and still
+  load-bearing: `Money.sum/2`'s second argument is exchange RATES,
+  defaulting to `latest_rates_or_empty_map()`, and it converts each
   element via `to_currency/3` — an FX-converting function this library must
   never expose).
 - `mult/2(money, number)` → `Money.mult/2` (`lib/money.ex:1239`, real,
