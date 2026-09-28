@@ -114,7 +114,7 @@
 
 - [x] 4.1 `MobusMoney.Schema`: `Code.ensure_loaded?/1` guard so the module
       does not require Ecto to compile when absent.
-- [ ] 4.2 `money_fields/1(name)` macro: declares `<name>_amount`
+- [x] 4.2 `money_fields/1(name)` macro: declares `<name>_amount`
       (`numeric(28,8)`) and `<name>_currency` (`varchar(3)`), `name` the
       atom prefix the caller chooses.
 - [ ] 4.3 `validate_money(changeset, name)` (PE-5, MINOR — `name` pinned as

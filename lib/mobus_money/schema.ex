@@ -28,6 +28,32 @@ defmodule MobusMoney.Schema do
   """
 
   if Code.ensure_loaded?(Ecto) do
-    # Task 4.2/4.3/4.4 surface compiles only when Ecto is present.
+    @doc """
+    Declares the `<name>_amount` (`:decimal`, migration `numeric(28,8)`) and
+    `<name>_currency` (`:string`, migration `varchar(3)`) field pair on an
+    Ecto schema, where `name` is the atom prefix the caller chooses.
+
+    Call it inside a `schema`/`embedded_schema` block, with the macro
+    imported:
+
+        defmodule Budget do
+          use Ecto.Schema
+          import MobusMoney.Schema, only: [money_fields: 1]
+
+          schema "budgets" do
+            money_fields :budget
+            # -> budget_amount   :decimal (numeric(28,8) in the migration)
+            # -> budget_currency :string  (varchar(3) in the migration)
+          end
+        end
+
+    See the moduledoc for the migration shape.
+    """
+    defmacro money_fields(name) when is_atom(name) do
+      quote do
+        field(:"#{unquote(name)}_amount", :decimal)
+        field(:"#{unquote(name)}_currency", :string)
+      end
+    end
   end
 end
