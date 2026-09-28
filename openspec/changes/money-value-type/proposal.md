@@ -35,7 +35,10 @@ rounding modes, integer-minor-unit conversion, localized formatting). What is
 missing upstream is the ecosystem's own opinionated layer: one house rounding
 default, a validated two-column storage-pair convention for a project whose
 consumers are Ecto-backed and multi-schema (Atrapos: one usage table per
-tenant schema), and FX left off by construction rather than merely unused.
+tenant schema), and FX turned off deliberately — enforced by a loud boot-time
+consumer check rather than merely left unused (a library's own compile-time
+configuration cannot disable another dependency's service for a consumer;
+Mix never loads it — see design.md D4).
 
 This is the seed library of the family named in GC-5586: `mobus_billing`
 (payment gateways, webhook dedupe) and `mobus_ledger` (issued-document
@@ -59,9 +62,14 @@ numbering) are siblings, not built here, and neither exists yet.
   field together, a changeset validation enforcing pairing + registry
   membership + non-negativity, and a reader building one `MobusMoney.Money`
   (or `nil` for an unset pair) from the two columns.
-- Configure `ex_money` with `auto_start_exchange_rate_service: false` at the
-  library boundary — no network FX lookups are reachable through this
-  library, by construction, not merely by non-use.
+- Add `MobusMoney.ensure_fx_disabled!/0`, a runtime assertion a consumer
+  calls from its OWN `Application.start/2` that raises immediately, naming
+  the missing setting, unless the consumer's own config has set `config
+  :ex_money, auto_start_exchange_rate_service: false` — a library's own
+  compile-time configuration cannot do this for a consumer (Mix never loads
+  a dependency's config files); this turns a forgotten line into a loud boot-time failure
+  instead of a silent, unaudited FX capability. Documented as a required
+  adoption step in `@moduledoc` and the README.
 - Publish `mobus_money` 0.1.0 to hex once merged and independently verified
   (no consumer may take a path dependency on this repo — GC-5584's two-week
   unpublished-path-dependency defect is the precedent this avoids).

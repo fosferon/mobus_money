@@ -162,22 +162,69 @@ defensible in the abstract, but it is a silent behavior change for both
 surveyed consumers relative to what they already do today, with no consumer
 asking for it.
 
-### D4. No FX by construction, not by convention
+### D4. No FX, enforced by a loud boot-time check — not by a library config.exs, which Mix never loads
 
-`Application.put_env(:ex_money, :auto_start_exchange_rate_service, false)` is
-set by this library at compile time (`config/config.exs`, checked into the
-library so a consumer does not have to remember it) — `ex_money`'s exchange
-rate service, if left to its default, starts a GenServer that polls an
-external FX API on application start. This library's own `add/2`, `sub/2`,
-`sum/2`, `compare/2` reject a currency mismatch with an error tuple carrying
-both codes; none converts. No public function accepts an exchange rate.
+**Corrected during doc review (F1.1, P0):** the original text of this
+decision claimed a checked-in `config/config.exs` in this library would
+disable `ex_money`'s exchange-rate service "for every consumer". That is
+architecturally impossible: Mix does not load a *dependency's*
+`config/config.exs` at all — only the top-level application being compiled
+(or an umbrella root) has its `config/config.exs` read, which is exactly why
+`ex_money`'s own documentation, and this ecosystem's own prior-art consumer
+(`~/Sites/www` / Seaker, `config/config.exs:36-43`, verified by direct read:
+`config :ex_money, open_exchange_rates_app_id: ..., exchange_rates_retrieve_every: ...`)
+each configure `:ex_money` in the **consuming application's own** config, not
+in a library. A config file shipped in this library's own tree (even if
+`mix.exs`'s `package/0` `files` list included `config/`, which it does not)
+would never reach a consumer's compiled release.
+
+`ex_money`'s exchange-rate service is (per the 2026-09-26 probe) started from
+`:ex_money`'s own `application/0` callback when the app boots, unless config
+says otherwise — and because `:ex_money` is a dependency of `:mobus_money`,
+OTP's start order brings `:ex_money` up *before* `:mobus_money`, so even a
+`MobusMoney.Application.start/2` callback in this library cannot preempt it:
+by the time this library's own code could run, `:ex_money`'s supervision
+tree has already read whatever config existed at boot. There is no code this
+library can ship that unilaterally guarantees the service never starts in a
+consumer that forgot to configure it — "by construction" was the wrong claim.
+
+What this library does instead, honestly: (1) **documents** the required
+line prominently — a `@moduledoc` warning on the top-level `MobusMoney`
+module and a README section, both stating verbatim the config a consumer
+MUST carry (`config :ex_money, auto_start_exchange_rate_service: false`);
+(2) ships `MobusMoney.ensure_fx_disabled!/0`, a runtime assertion a consumer
+calls from its OWN `Application.start/2` (documented as a required adoption
+step, and stated as such in each consumer's own follow-up change-set's
+tasks), which raises immediately, naming the missing config, if
+`Application.get_env(:ex_money, :auto_start_exchange_rate_service)` is not
+`false` — turning a forgotten config line into a loud boot-time crash instead
+of a silent, unaudited capability. This is weaker than "impossible by
+construction" and the spec/proposal language is corrected to say so
+precisely (a consumer's own boot check, not a library-side guarantee). This
+library's own arithmetic (`add/2`, `sub/2`, `sum/2`, `compare/2`) rejects a
+currency mismatch with an error tuple carrying both codes regardless of
+whether the exchange-rate service is running; no public function accepts an
+exchange rate, so even an un-configured consumer's FX service, if running,
+is never reachable through this library's own API.
+
+Alternative rejected: a library-side `config/config.exs`, as originally
+written. Corrected above — Mix never loads it.
 
 Alternative rejected: leave the exchange-rate service at its default and
-simply never call `Money.to_currency/2`. Unused capability that starts a
-network-polling process on every consumer's boot is still a defect the
-2026-09-06 ruling's spirit ("an unaudited FX conversion is indistinguishable
-from an undisclosed markup") argues against — if it is never audited because
-it is never used, it should not be reachable at all.
+rely solely on this library never calling `Money.to_currency/2`. Unused
+capability that starts a network-polling process on every consumer's boot
+is still a defect the 2026-09-06 ruling's spirit ("an unaudited FX
+conversion is indistinguishable from an undisclosed markup") argues against;
+`ensure_fx_disabled!/0` converts that risk into a boot-time failure a
+consumer cannot silently ship past.
+
+Alternative rejected: have `mobus_money` itself declare an OTP application
+(`mod: {MobusMoney.Application, []}`) that calls `put_env` in `start/2` and
+rely on that. Rejected above by the start-order argument — it would appear
+to work in a dev/test run where `:ex_money`'s service start is lazy enough
+to race favorably, and fail unpredictably in a real release depending on
+supervision-tree timing, which is worse than an honest, always-loud
+`ensure_fx_disabled!/0` check.
 
 ### D5. Persisted money is two columns and one schema helper (Ecto is optional)
 
@@ -185,7 +232,34 @@ it is never used, it should not be reachable at all.
 and `<name>_currency` (`varchar(3)`) together on an Ecto schema;
 `MobusMoney.Schema.validate_money/2` (called from a changeset) enforces:
 both null or both non-null, currency valid per `MobusMoney.Currency.valid?/1`,
-amount not negative. `MobusMoney.Schema.read_money/2` returns one
+amount not negative.
+
+**Non-negativity, argued (F1.2, doc review round 1 — this was previously
+asserted without rationale):** `money_fields/1` targets the quantities named
+in this library's own surveyed consumers' current holdings — a budget cap, a
+usage cost, a spend total (Atrapos's three columns; sil-diary4's two) — every
+one of which is a magnitude, never a signed balance, in the code read for the
+Consumers section above. The value type itself is NOT restricted this way
+(`negative?/1` exists precisely because in-memory arithmetic can produce a
+negative intermediate, e.g. comparing a spend against a cap); the constraint
+is scoped to `money_fields/1`'s persisted pair specifically, not to
+`MobusMoney.Money` generally. A future consumer needing a signed persisted
+balance (a credit, a refund, a running account balance) does not fit
+`money_fields/1`'s contract and is out of scope here — declared forward, not
+silently possible by calling `validate_money/2` differently: **GC-5588's own
+follow-up** (no separate Bee filed; this library has no consumer with a
+signed-balance need today, and inventing the shape without one would be the
+same unmotivated-hardening mistake this project's falsification discipline
+(GC-5053) exists to prevent for code, applied here to schema design).
+
+Alternative rejected: no non-negativity constraint (accept any amount
+`money_fields/1` is given). Every surveyed consumer's holding is a magnitude;
+accepting a negative silently would let a signed-arithmetic bug (this
+library's own `sub/2` can produce a negative result) reach a persisted
+budget/cost column undetected, where it would misrepresent a magnitude as a
+debt with no consumer expecting that meaning.
+
+`MobusMoney.Schema.read_money/2` returns one
 `MobusMoney.Money` from the pair, or `nil` for null/null. Ecto is declared
 `optional: true` in `mix.exs`: a consumer that only needs the value type and
 arithmetic (no persistence) does not need Ecto pulled in transitively, and
@@ -344,10 +418,11 @@ un-shipped.
   not raise at compile time when Ecto is absent (simulated via
   `Code.ensure_loaded?/1` stub, not by actually removing the test-env
   dependency).
-- FX-disabled guard: a test asserts
-  `Application.get_env(:ex_money, :auto_start_exchange_rate_service) == false`
-  after this library's config loads, falsified by temporarily removing the
-  config line and observing the test fail before restoring it.
+- FX-disabled guard: `ensure_fx_disabled!/0` raises when the test env's
+  config for `:ex_money` is unset or `true`, and returns `:ok` when it is
+  explicitly `false` — both branches exercised, falsifying the raise path
+  first (not merely asserting the non-raising path, which alone would pass
+  even if the function silently no-op'd).
 - No test in this change-set exercises an actual consumer (Atrapos, MOBuS,
   sil-diary4) — this library has no adoption-site tests until each consumer's
   own follow-up change-set lands.

@@ -18,6 +18,7 @@ ground_truth_sources:
     - "openspec/changes/{change_name}/specs/**/*.md"
 
 scoped_modules:
+  MobusMoney: MobusMoney
   MobusMoney.Money: MobusMoney.Money
   MobusMoney.Currency: MobusMoney.Currency
   MobusMoney.Schema: MobusMoney.Schema

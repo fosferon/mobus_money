@@ -2,8 +2,12 @@
 
 - [ ] 1.1 Add `{:ex_money, "~> 6.2"}` and `{:ecto, "~> 3.10", optional: true}`
       to `mix.exs` `deps/0`; `mix deps.get`.
-- [ ] 1.2 `config/config.exs`: `config :ex_money, auto_start_exchange_rate_service: false`
-      (D4).
+- [ ] 1.2 `@moduledoc` on `MobusMoney` states the required consumer config
+      line verbatim (`config :ex_money, auto_start_exchange_rate_service:
+      false`) and that `ensure_fx_disabled!/0` (task 5.1) must be called from
+      the consumer's own `Application.start/2` (D4 — corrected during doc
+      review: a library's own `config/config.exs` is never loaded by Mix for
+      a consuming application, so no config file ships here).
 - [ ] 1.3 `openspec/specs/money/spec.md` delta authored (this change-set's
       spec deltas, folded on archive).
 
@@ -45,12 +49,15 @@
       test that the module does not raise at compile time when Ecto is
       stubbed absent.
 
-## 5. FX-disabled guard (D4)
+## 5. FX-disabled guard (D4 — corrected mechanism, doc review F1.1)
 
-- [ ] 5.1 Config-loaded test asserting
-      `Application.get_env(:ex_money, :auto_start_exchange_rate_service) == false`,
-      falsified by temporarily removing 1.2's config line and observing red,
-      then restoring it.
+- [ ] 5.1 `MobusMoney.ensure_fx_disabled!/0`: raises, naming the missing
+      setting, unless `Application.get_env(:ex_money,
+      :auto_start_exchange_rate_service) == false` in the CALLING
+      application's config (not this library's — there is none). Falsifying
+      test: call it with the config unset/true in the test env and observe
+      the raise; call it with the config explicitly set to `false` and
+      observe it returns `:ok`.
 
 ## 6. Verification
 

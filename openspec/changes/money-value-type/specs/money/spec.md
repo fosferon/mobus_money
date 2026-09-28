@@ -34,17 +34,33 @@ perform a currency conversion.
 - **THEN** it returns `{:error, {:currency_mismatch, "EUR", "USD"}}` and no
   conversion occurs
 
-### Requirement: The FX exchange-rate service is disabled by construction
+### Requirement: A consumer's disabled FX service is asserted at boot, loudly
 
-The system SHALL configure `ex_money`'s `auto_start_exchange_rate_service` to
-`false` at the library boundary, so no network FX lookup is reachable through
-this library regardless of whether a consumer calls a conversion function.
+The system SHALL expose `MobusMoney.ensure_fx_disabled!/0`, which SHALL
+raise immediately, naming the missing setting, unless
+`Application.get_env(:ex_money, :auto_start_exchange_rate_service)` is
+`false` in the calling application's own configuration — a dependency's own
+`config/config.exs` is never loaded by Mix for the consuming application, so
+this library SHALL NOT claim to disable `ex_money`'s exchange-rate service by
+shipping its own config file. This library's own arithmetic (`add/2`,
+`sub/2`, `sum/2`, `compare/2`) SHALL reject a currency-mismatched operation
+with an error tuple regardless of whether the exchange-rate service is
+running, and no public function in this library SHALL accept an exchange
+rate.
 
-#### Scenario: The exchange-rate service never starts
+#### Scenario: A consumer that forgot the config crashes loudly at boot
 
-- **WHEN** the `mobus_money` application's configuration loads
-- **THEN** `Application.get_env(:ex_money, :auto_start_exchange_rate_service)`
-  is `false`
+- **WHEN** `MobusMoney.ensure_fx_disabled!/0` is called and the calling
+  application's configuration has not set
+  `auto_start_exchange_rate_service: false` for `:ex_money`
+- **THEN** it raises, naming the missing configuration key
+
+#### Scenario: A correctly configured consumer's check passes silently
+
+- **WHEN** `MobusMoney.ensure_fx_disabled!/0` is called and the calling
+  application's configuration has set `auto_start_exchange_rate_service:
+  false` for `:ex_money`
+- **THEN** it returns without raising
 
 ### Requirement: Rounding follows the currency's minor-unit exponent, with an explicit house default
 
