@@ -24,7 +24,7 @@
 
 ## 2. Currency registry (D2, D3)
 
-- [ ] 2.1 `MobusMoney.Currency` (PE-1 — real upstream surface, not the
+- [x] 2.1 `MobusMoney.Currency` (PE-1 — real upstream surface, not the
       invented one): `valid?/1` via `match?({:ok, _},
       Money.Currency.currency_for_code/1)`; `exponent/1` via
       `currency_for_code/1`'s `{:ok, currency}` then `currency.iso_digits ||
