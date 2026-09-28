@@ -28,6 +28,13 @@ defmodule MobusMoney.Money do
   @typedoc "A money value: `Money.t()` from ex_money, used directly."
   @type t :: Money.t()
 
+  @typedoc """
+  A rounding mode passed through to `Money.round/2`. ex_money defines no
+  public type for it — modes are Cldr's; the house default is `:half_up`
+  (`MobusMoney.Currency.default_rounding_mode/0`).
+  """
+  @type rounding_mode :: atom()
+
   @typedoc "Why a money value could not be constructed."
   @type error_reason ::
           :float_amount | :nil_amount | :unparseable_amount | :unknown_currency
@@ -47,7 +54,7 @@ defmodule MobusMoney.Money do
   is ever called — this contract is ours, not a translation of ex_money's
   exception text.
   """
-  @spec new(integer() | Decimal.t() | String.t() | nil, Money.Currency.code()) ::
+  @spec new(integer() | Decimal.t() | String.t() | nil, Money.currency_reference()) ::
           {:ok, t()} | {:error, error_reason()}
   def new(nil, _currency_code), do: {:error, :nil_amount}
 
@@ -70,7 +77,7 @@ defmodule MobusMoney.Money do
   Like `new/2`, but raises `MobusMoney.InvalidMoneyError` (carrying the same
   reason atom `new/2` returns) instead of returning an error tuple.
   """
-  @spec new!(integer() | Decimal.t() | String.t() | nil, Money.Currency.code()) ::
+  @spec new!(integer() | Decimal.t() | String.t() | nil, Money.currency_reference()) ::
           t() | no_return()
   def new!(amount, currency_code) do
     case new(amount, currency_code) do
@@ -86,7 +93,7 @@ defmodule MobusMoney.Money do
   for an unknown code; this function normalizes both into the same
   two-shape contract as `new/2`: `{:ok, money}` | `{:error, :unknown_currency}`.
   """
-  @spec zero(Money.Currency.code()) :: {:ok, t()} | {:error, :unknown_currency}
+  @spec zero(Money.currency_reference()) :: {:ok, t()} | {:error, :unknown_currency}
   def zero(currency_code) do
     case Money.zero(currency_code) do
       %Money{} = money -> {:ok, money}
@@ -143,7 +150,7 @@ defmodule MobusMoney.Money do
   Never delegates to `Money.sum/2` — its second argument is exchange rates
   and it converts via `to_currency/3`, which this library must never do.
   """
-  @spec sum([t()], Money.Currency.code()) ::
+  @spec sum([t()], Money.currency_reference()) ::
           {:ok, t()}
           | {:error, :unknown_currency}
           | {:error, {:currency_mismatch, atom(), atom()}}
@@ -211,7 +218,7 @@ defmodule MobusMoney.Money do
       Money.new(:JPY, "100")
   """
   @spec round(t()) :: t()
-  @spec round(t(), Money.rounding_mode()) :: t()
+  @spec round(t(), rounding_mode()) :: t()
   def round(%Money{} = money, mode \\ MobusMoney.Currency.default_rounding_mode()) do
     Money.round(money, rounding_mode: mode)
   end
@@ -239,7 +246,7 @@ defmodule MobusMoney.Money do
       {:USD, 20000, -2, Money.new(:USD, "0.00")}
   """
   @spec to_integer_exp(t()) ::
-          {Money.Currency.code(), integer(), integer(), t()}
+          {Money.currency_reference(), integer(), integer(), t()}
   def to_integer_exp(%Money{} = money) do
     Money.to_integer_exp(money, rounding_mode: MobusMoney.Currency.default_rounding_mode())
   end
@@ -256,7 +263,7 @@ defmodule MobusMoney.Money do
   `{:error, {Money.UnknownCurrencyError, _}}` tuple never escapes this
   library's boundary.
   """
-  @spec from_integer(integer(), Money.Currency.code()) ::
+  @spec from_integer(integer(), Money.currency_reference()) ::
           {:ok, t()} | {:error, :unknown_currency}
   def from_integer(amount, currency_code) do
     case Money.from_integer(amount, currency_code) do

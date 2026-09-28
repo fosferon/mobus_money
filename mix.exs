@@ -56,7 +56,11 @@ defmodule MobusMoney.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"]
+      extras: ["README.md"],
+      # Cross-package type links: @specs reference ex_money types
+      # (Money.Currency.code/0, Money.rounding_mode/0); without this mapping
+      # ExDoc cannot resolve them and every spec emits an undefined-type warning.
+      deps: [{:ex_money, "https://hexdocs.pm/ex_money/"}]
     ]
   end
 end

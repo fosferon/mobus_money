@@ -17,7 +17,7 @@ defmodule MobusMoney.Currency do
   Accepts an atom or a binary (`:EUR`, `"EUR"`, `"eur"`), matching
   `Money.Currency.currency_for_code/1`'s own acceptance.
   """
-  @spec valid?(Money.Currency.code()) :: boolean()
+  @spec valid?(Money.currency_reference()) :: boolean()
   def valid?(code) do
     match?({:ok, _}, Money.Currency.currency_for_code(code))
   end
@@ -38,7 +38,7 @@ defmodule MobusMoney.Currency do
       iex> MobusMoney.Currency.exponent(:IQD)
       3
   """
-  @spec exponent(Money.Currency.code()) :: non_neg_integer() | nil
+  @spec exponent(Money.currency_reference()) :: non_neg_integer() | nil
   def exponent(code) do
     case Money.Currency.currency_for_code(code) do
       {:ok, currency} -> currency.iso_digits || currency.digits
@@ -50,7 +50,7 @@ defmodule MobusMoney.Currency do
   Returns all known tender currency codes (atoms), ex_money's full ISO 4217
   set.
   """
-  @spec all_codes() :: [Money.Currency.code(), ...]
+  @spec all_codes() :: [Money.currency_reference(), ...]
   def all_codes do
     Money.Currency.known_tender_currencies()
   end
